@@ -156,7 +156,7 @@ id_compositor int auto_increment,
 nombre varchar(400),
  primary key(id_compositor)
 );
--- actualizao datos compositores
+-- actualizo datos compositores
 insert compositores (nombre) select distinct canciones.compositor from canciones ;
 -- creo columnas de sustitución id_compositor em canciones
 alter table canciones add id_compositor int;
@@ -171,7 +171,7 @@ id_director int auto_increment,
 nombre varchar(100),
 primary key (id_director)
 );
--- actualizao datos directores
+-- actualizo datos directores
 insert directores (nombre) select distinct peliculas.director from peliculas;
 -- creo columnas de sustitución id_director em peliculas
 alter table peliculas add id_director int;
@@ -184,7 +184,7 @@ id_genero int auto_increment,
 nombre varchar(150),
 primary key (id_genero)
 );
--- actualizao datos genero
+-- actualizo datos genero
 insert generos (nombre) select distinct genero from peliculas;
 -- creo columnas de sustitución id_genero em peliculas
 alter table peliculas add id_genero int;
@@ -213,20 +213,49 @@ update peliculas, actores set peliculas.id_protagonista = actores.id_actor where
 update peliculas, actores set peliculas.id_secundario = actores.id_actor where peliculas.actor_secundario =actores.nombre; 
 
 -- coche normalizacion
-create table taller (
+
+-- separo marca
+create table coche_marcas (
+id_marca INT auto_increment,
+nombre varchar(100),
+primary key (id_marca)
+);
+-- actualizo datos marca
+insert into coche_marcas (nombre)  select distinct marca from coches ;
+-- creo columnas de sustitución id_marca en coche_marcas
+alter table coches add id_marca int;
+ALTER TABLE coches ADD CONSTRAINT fk_id_marca FOREIGN KEY (id_marca) REFERENCES coche_marcas(id_marca);
+update coches,coche_marcas set coches.id_marca = coche_marcas.id_marca where coches.marca =coche_marcas.nombre ;
+
+-- separo taller
+create table coche_talleres (
 id_taller INT auto_increment,
 nombre varchar(100),
 direccion varchar(255),
 primary key (id_taller)
 );
+-- actualizo datos coche_taller
+insert into coche_talleres (nombre, direccion) select distinct taller_nombre, taller_direccion from coches ;
+-- creo columnas de sustitución id_taller en coche_talleres
+alter table coches add id_taller int;
+ALTER TABLE coches ADD CONSTRAINT fk_id_taller FOREIGN KEY (id_taller) REFERENCES coche_talleres(id_taller);
+update coches,coche_talleres set coches.id_taller = coche_talleres.id_taller where coches.taller_nombre =coche_talleres.nombre and  coches.taller_direccion =coche_talleres.direccion  ;
 
-create table coche_propietario (
+-- separo propietario
+create table coche_propietarios (
 id_propietario int auto_increment,
 nombre varchar(100),
 direccion varchar(255),
 telefono varchar(50),
 primary key (id_propietario)
 );
+-- actualizo datos coche_propietario
+insert into coche_propietarios (nombre, direccion,telefono) select distinct propietario_nombre, propietario_direccion, propietario_telefono from coches ;
+-- creo columnas de sustitución id_taller en coche_talleres
+alter table coches add id_propietario int;
+ALTER TABLE coches ADD CONSTRAINT fk_id_propietario_coche FOREIGN KEY (id_propietario) REFERENCES coche_propietarios(id_propietario);
+update coches,coche_propietarios set coches.id_propietario = coche_propietarios.id_propietario where coches.propietario_nombre =coche_propietarios.nombre and  coches.propietario_direccion =coche_propietarios.direccion  ;
+
 
 -- futbol normalizacion
 -- separo jugadores
@@ -318,7 +347,7 @@ primary key (id_propietario)
 -- actualizo animal.propietarios
 insert into animal_propietarios  (nombre, direccion) select distinct propietario_nombre, propietario_direccion from animales; 
 alter table animales add id_propietario int;
-alter table animales add constraint fk_id_propietario foreign key (id_propietario) references animal_propietarios(id_propietario); 
+alter table animales add constraint fk_id_propietario_animal foreign key (id_propietario) references animal_propietarios(id_propietario); 
 update animales,animal_propietarios set animales.id_propietario=animal_propietarios.id_propietario where animales.propietario_nombre =animal_propietarios.nombre and animales.propietario_direccion =animal_propietarios.direccion ;
 -- separo veterinarios
 create table animal_veterinarios (
