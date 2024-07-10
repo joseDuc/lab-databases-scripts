@@ -448,7 +448,7 @@ foreign key (id_veterinario) references animal_veterinarios(id_veterinario)
 -- actualizo coche_propietario
 insert into animal_veterinario (id_animal,id_veterinario) select distinct animales.id_animal ,animales.id_veterinario from animales ;
 
--- select  c.id_coche, m.nombre, c.modelo,cps.nombre as propietario ,tls.nombre  as taller
+-- select  c.id_coche, m.nombre, c.modelo, cps.nombre as propietario, tls.nombre  as taller
 -- from coche_propietario cp
 -- JOIN coches c ON c.id_coche  = cp.id_coche 
 -- JOIN coche_marcas m ON c.id_marca  = m.id_marca 

@@ -7,13 +7,14 @@ Ejemplo de una  biblioteca
 <br>
 
 ## Cardinalidad 
-Existen las entidades independientes: autores, generos y miembros.
+Existen las entidades independientes: libros, autores, generos y miembros.
 <br>
 Y las tablas intermedias: libro_autor, libro_genero y prestamos.
-<br>
-La relación entre generos/libro_genero es de muchos/muchos.
-La relación entre libro_genero/libros es de muchos/muchos.
-La relación entre autores/libro_autores es de uno/muchos.
-La relación entre libro_autor/libros es de muchos/muchos.
-La relación entre miembros/prestamos es de muchos/uno.
-La relación entre prestamos/libros es de uno/uno.
+<br><br>
+La relación entre libro_genero/libro es de muchos/muchos.<br>
+La relación entre libro_autor/libros es de muchos/muchos.<br>
+
+La relación entre prestamos/miembros es de uno/uno.<br>
+La relación entre miembros/prestamos es de uno/muchos.<br>
+La relación entre prestamos/libros es de uno/uno.<br>
+La relación entre libros/prestamos es de uno/muchos.<br>
