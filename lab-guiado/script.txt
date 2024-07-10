@@ -137,7 +137,7 @@ ALTER TABLE canciones ADD CONSTRAINT fk_id_artista FOREIGN KEY (id_artista) REFE
 update canciones, artistas set canciones.id_artista = artistas.id_artista where canciones.artista =artistas.nombre ;
 
 -- separo albums
-CREATE TABLE   canciones_album (
+CREATE TABLE   cancion_album (
 id_album INT  auto_increment,
 id_artista int,
 nombre varchar(100),
@@ -145,10 +145,10 @@ PRIMARY key(id_album)
 );
 -- actualizo datos albums (falta el nombre del album)
 -- insert into canciones_album (id_artista) select artistas.id_Artista from artistas inner join canciones on artistas.nombre=canciones.artista;
-insert into canciones_album (id_artista,nombre) select distinct id_artista,album from canciones;
+insert into cancion_album (id_artista,nombre) select distinct id_artista,album from canciones;
 ALTER TABLE canciones ADD id_album INT;
-ALTER TABLE canciones ADD CONSTRAINT fk_id_album FOREIGN KEY (id_album) REFERENCES canciones_album(id_album);
-update canciones, canciones_album set canciones.id_album = canciones_album.id_album where canciones.album =canciones_album.nombre ;
+ALTER TABLE canciones ADD CONSTRAINT fk_id_album FOREIGN KEY (id_album) REFERENCES cancion_album(id_album);
+update canciones, cancion_album set canciones.id_album = cancion_album.id_album where canciones.album =cancion_album.nombre ;
 
 -- separo compositores
 create table compositores (
@@ -212,6 +212,32 @@ ALTER TABLE peliculas ADD CONSTRAINT fk_id_secundario FOREIGN KEY (id_secundario
 update peliculas, actores set peliculas.id_protagonista = actores.id_actor where peliculas.actor_principal =actores.nombre; 
 update peliculas, actores set peliculas.id_secundario = actores.id_actor where peliculas.actor_secundario =actores.nombre; 
 
+-- creo tabla intermedia pelicula_actorSecundario
+create table pelicula_actorPrincipal(
+id_pelicula int not null,
+id_actor int not null,
+primary key(id_pelicula,id_actor),
+FOREIGN KEY (id_pelicula) REFERENCES peliculas(id_pelicula),
+FOREIGN KEY (id_actor) REFERENCES actores(id_Actor)
+);
+-- actualizo pelicula_actorPrincipal
+insert into pelicula_actorprincipal (id_pelicula,id_actor) select peliculas.id_pelicula ,actores.id_actor from peliculas,actores where peliculas.id_protagonista =actores.id_actor ;
+
+create table pelicula_actorSecundario(
+id_pelicula int not null,
+id_actor int not null,
+primary key(id_pelicula,id_actor),
+FOREIGN KEY (id_pelicula) REFERENCES peliculas(id_pelicula),
+FOREIGN KEY (id_actor) REFERENCES actores(id_Actor)
+);
+-- actualizo pelicula_actorSecundario
+insert into pelicula_actorSecundario (id_pelicula,id_actor) select peliculas.id_pelicula ,actores.id_actor from peliculas,actores where peliculas.id_secundario =actores.id_actor ;
+
+-- SELECT p.titulo, a.nombre
+-- FROM pelicula_actorSecundario ap
+-- JOIN peliculas p ON ap.id_pelicula = p.id_pelicula 
+ -- JOIN actores A ON ap.id_actor = a.id_actor ;
+
 -- coche normalizacion
 
 -- separo marca
@@ -255,6 +281,39 @@ insert into coche_propietarios (nombre, direccion,telefono) select distinct prop
 alter table coches add id_propietario int;
 ALTER TABLE coches ADD CONSTRAINT fk_id_propietario_coche FOREIGN KEY (id_propietario) REFERENCES coche_propietarios(id_propietario);
 update coches,coche_propietarios set coches.id_propietario = coche_propietarios.id_propietario where coches.propietario_nombre =coche_propietarios.nombre and  coches.propietario_direccion =coche_propietarios.direccion  ;
+-- tabla intermedia coche_propietario
+create table coche_propietario(
+id_coche int not null,
+id_propietario int not null,
+primary key(id_coche,id_propietario),
+foreign key (id_coche) references coches(id_coche),
+foreign key (id_propietario) references coche_propietarios(id_propietario)
+
+);
+-- actualizo coche_propietario
+insert into coche_propietario (id_coche,id_propietario) select distinct coches.id_coche ,coches.id_propietario from coches ;
+-- tabla intermedia coche_propietario
+create table coche_taller(
+id_coche int not null,
+id_taller int not null,
+primary key(id_coche,id_taller),
+foreign key (id_coche) references coches(id_coche),
+foreign key (id_taller) references coche_talleres(id_taller)
+
+);
+-- actualizo coche_propietario
+insert into coche_taller (id_coche,id_taller) select distinct coches.id_coche ,coches.id_taller from coches ;
+
+-- select  c.id_coche, m.nombre, c.modelo,cps.nombre as propietario ,tls.nombre  as taller
+-- from coche_propietario cp
+-- JOIN coches c ON c.id_coche  = cp.id_coche 
+-- JOIN coche_marcas m ON c.id_marca  = m.id_marca 
+-- JOIN coche_propietarios cps ON cp.id_propietario = cps.id_propietario 
+-- JOIN coche_taller tl ON cp.id_coche = tl.id_coche 
+-- JOIN coche_talleres tls ON tl.id_taller = tls.id_taller 
+;
+
+
 
 
 -- futbol normalizacion
@@ -264,6 +323,7 @@ id_jugador int auto_increment,
 nombre varchar(100),
 primary key (id_jugador)
 );
+
 -- tabla temp para acumular a los jugadores sin repeticiones
 create table futbol_jugadores_tmp (
 id_jugador int auto_increment,
@@ -280,6 +340,8 @@ id_equipo int ,
 id_jugador int,
 primary key (id_equipo,id_jugador)
 );
+ALTER TABLE equipoFutbol_jugador ADD CONSTRAINT fk_equipo_id FOREIGN KEY (id_equipo) REFERENCES equiposfutbol(id_equipo);
+ALTER TABLE equipoFutbol_jugador ADD CONSTRAINT fk_jugador_id FOREIGN KEY (id_jugador) REFERENCES futbol_jugadores(id_jugador);
 -- actualizo tabla equipoFutbol_jugador
 insert into equipoFutbol_jugador (id_equipo,id_jugador) select equiposFutbol.id_equipo,futbol_jugadores.id_jugador from equiposfutbol,futbol_jugadores where equiposfutbol.jugador1=futbol_jugadores.nombre;
 insert into equipoFutbol_jugador (id_equipo,id_jugador) select equiposFutbol.id_equipo,futbol_jugadores.id_jugador from equiposfutbol,futbol_jugadores where equiposfutbol.jugador2=futbol_jugadores.nombre;
@@ -361,6 +423,39 @@ insert into animal_veterinarios  (nombre, direccion) select distinct veterinario
 alter table animales add id_veterinario int;
 alter table animales add constraint fk_id_veterinario foreign key (id_veterinario) references animal_veterinarios(id_veterinario); 
 update animales,animal_veterinarios set animales.id_veterinario=animal_veterinarios.id_veterinario where animales.veterinario_nombre =animal_veterinarios.nombre and animales.veterinario_direccion =animal_veterinarios.direccion ;
+
+
+-- tabla intermedia animal_propietario
+create table animal_propietario(
+id_animal int not null,
+id_propietario int not null,
+primary key(id_animal,id_propietario),
+foreign key (id_animal) references animales(id_animal),
+foreign key (id_propietario) references coche_propietarios(id_propietario)
+
+);
+-- actualizo animal_propietarios
+insert into animal_propietario (id_animal,id_propietario) select distinct animales.id_animal ,animales.id_propietario from animales ;
+-- tabla intermedia animal_veterinario
+create table animal_veterinario(
+id_animal int not null,
+id_veterinario int not null,
+primary key(id_animal,id_veterinario),
+foreign key (id_animal) references animales(id_animal),
+foreign key (id_veterinario) references animal_veterinarios(id_veterinario)
+
+);
+-- actualizo coche_propietario
+insert into animal_veterinario (id_animal,id_veterinario) select distinct animales.id_animal ,animales.id_veterinario from animales ;
+
+-- select  c.id_coche, m.nombre, c.modelo,cps.nombre as propietario ,tls.nombre  as taller
+-- from coche_propietario cp
+-- JOIN coches c ON c.id_coche  = cp.id_coche 
+-- JOIN coche_marcas m ON c.id_marca  = m.id_marca 
+-- JOIN coche_propietarios cps ON cp.id_propietario = cps.id_propietario 
+-- JOIN coche_taller tl ON cp.id_coche = tl.id_coche 
+-- JOIN coche_talleres tls ON tl.id_taller = tls.id_taller 
+;
 
 
 -- elimina tablas temp
