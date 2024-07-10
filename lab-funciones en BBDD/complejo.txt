@@ -1,0 +1,125 @@
+DROP DATABASE IF EXISTS cine_complejo;
+
+CREATE DATABASE IF NOT EXISTS cine_complejo;
+USE cine_complejo;
+
+
+
+create table peliculas(
+id int auto_increment,
+titulo varchar(100),
+anio_lanzamiento int,
+director varchar(100),
+actor_principal varchar (100),
+actor_secundario varchar(100), 
+genero varchar (100),
+primary key (id)
+);
+
+INSERT INTO peliculas (id, titulo, anio_lanzamiento, director, actor_principal, actor_secundario, genero) VALUES
+(1, 'El Padrino', 1972, 'Francis Ford Coppola', 'Marlon Brando', 'Al Pacino', 'Crimen'),
+(2, 'Pulp Fiction', 1994, 'Quentin Tarantino', 'John Travolta', 'Samuel L. Jackson', 'Crimen'),
+(3, 'Forrest Gump', 1994, 'Robert Zemeckis', 'Tom Hanks', 'Robin Wright', 'Drama'),
+(4, 'El Caballero Oscuro', 2008, 'Christopher Nolan', 'Christian Bale', 'Heath Ledger', 'Acción'),
+(5, 'La Lista de Schindler', 1993, 'Steven Spielberg', 'Liam Neeson', 'Ralph Fiennes', 'Drama'),
+(6, 'Titanic', 1997, 'James Cameron', 'Leonardo DiCaprio', 'Kate Winslet', 'Romance'),
+(7, 'Matrix', 1999, 'Lana Wachowski', 'Keanu Reeves', 'Laurence Fishburne', 'Ciencia ficción'),
+(8, 'El Señor de los Anillos: La Comunidad del Anillo', 2001, 'Peter Jackson', 'Elijah Wood', 'Ian McKellen', 'Fantasía'),
+(9, 'Gladiador', 2000, 'Ridley Scott', 'Russell Crowe', 'Joaquin Phoenix', 'Acción'),
+(10, 'Jurassic Park', 1993, 'Steven Spielberg', 'Sam Neill', 'Laura Dern', 'Ciencia ficción'),
+(11, 'Volver al Futuro', 1985, 'Robert Zemeckis', 'Michael J. Fox', 'Christopher Lloyd', 'Ciencia ficción'),
+(12, 'El Silencio de los Inocentes', 1991, 'Jonathan Demme', 'Jodie Foster', 'Anthony Hopkins', 'Thriller'),
+(13, 'El Gran Lebowski', 1998, 'Joel Coen', 'Jeff Bridges', 'John Goodman', 'Comedia'),
+(14, 'Star Wars: Episodio IV - Una Nueva Esperanza', 1977, 'George Lucas', 'Mark Hamill', 'Harrison Ford', 'Ciencia ficción'),
+(15, 'Inception', 2010, 'Christopher Nolan', 'Leonardo DiCaprio', 'Joseph Gordon-Levitt', 'Ciencia ficción'),
+(16, 'La La Land', 2016, 'Damien Chazelle', 'Ryan Gosling', 'Emma Stone', 'Musical'),
+(17, 'Mad Max: Furia en el Camino', 2015, 'George Miller', 'Tom Hardy', 'Charlize Theron', 'Acción'),
+(18, 'El Pianista', 2002, 'Roman Polanski', 'Adrien Brody', 'Thomas Kretschmann', 'Drama'),
+(19, 'Los Infiltrados', 2006, 'Martin Scorsese', 'Leonardo DiCaprio', 'Matt Damon', 'Crimen'),
+(20, 'Harry Potter y la Piedra Filosofal', 2001, 'Chris Columbus', 'Daniel Radcliffe', 'Emma Watson', 'Fantasía');
+
+-- chatGPT no me ha querido dar mas
+
+-- directores
+create table directores(
+id int auto_increment,
+nombre varchar(100) not null,
+primary key(id)
+);
+insert into directores (nombre) select distinct director from peliculas;
+alter table peliculas add id_director int;
+update peliculas, directores set id_director = directores.id where peliculas.director=directores.nombre; 
+
+-- actores
+create table actores(
+id int auto_increment,
+nombre varchar(100) not null,
+primary key(id)
+);
+create table actoresTmp(
+id int auto_increment,
+nombre varchar(100) not null,
+primary key(id)
+);
+insert into actoresTmp (nombre) select distinct actor_principal from peliculas union select distinct actor_secundario from peliculas;
+insert into actores (nombre) select distinct nombre from actoresTmp;
+
+-- peliculasActores
+create table peliculasActores(
+id_pelicula int,
+id_actor int,
+principal bool,
+primary key(id_pelicula,id_actor,principal),
+foreign key (id_pelicula) references peliculas(id),
+foreign key (id_actor) references actores(id)
+);
+insert into peliculasactores (id_pelicula,id_actor,principal) 
+select peliculas.id,actores.id, 1 as principal 
+from actores, peliculas 
+where actores.nombre=peliculas.actor_principal;
+
+insert into peliculasactores (id_pelicula,id_actor,principal) 
+select peliculas.id,actores.id, 0 as principal 
+from actores, peliculas 
+where actores.nombre=peliculas.actor_secundario; 
+
+alter table peliculas drop column director;
+alter table peliculas drop column actor_principal;
+alter table peliculas drop column actor_secundario;
+
+drop table actoresTmp;
+
+-- todas
+select p.id , p.titulo, p.anio_lanzamiento, p.genero,d.nombre 
+from peliculas p
+join directores d on p.id_director =d.id ;
+
+-- entre 1980-2000 
+select p.id , p.titulo, p.anio_lanzamiento, p.genero,d.nombre 
+from peliculas p
+join directores d on p.id_director =d.id 
+where p.anio_lanzamiento between 1980 and 2000;
+
+-- count de cada 
+select genero , count(*) as count
+from peliculas p
+group by genero;
+
+-- todas con actores
+select p.id , p.titulo, p.anio_lanzamiento, p.genero,d.nombre as director ,a1.nombre as principal ,a2.nombre as secundario
+from peliculas p
+join directores d on p.id_director =d.id 
+join peliculasactores p1 on p.id =p1.id_pelicula and p1.principal=1
+join actores a1  on a1.id =p1.id_actor 
+join peliculasactores p2 on p.id =p2.id_pelicula and p2.principal=0
+join actores a2  on a2.id =p2.id_actor 
+;
+
+-- que actue Leonardo DiCaprio 
+select p.id , p.titulo, p.anio_lanzamiento, p.genero,d.nombre as director ,a1.nombre as actor 
+from peliculas p
+join directores d on p.id_director =d.id 
+join peliculasactores p1 on p.id =p1.id_pelicula
+join actores a1  on a1.id =p1.id_actor  and a1.nombre ='Leonardo DiCaprio'
+;
+
