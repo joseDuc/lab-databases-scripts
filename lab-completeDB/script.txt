@@ -307,6 +307,13 @@ rollback;
     join hotel h2 on h2.id =h.id_hotel 
     order by c.nombre
     
+    -- total reservas del hotel 1 o 2  en julio (general)
+    select h2.nombre ,count(*) as total_reservas
+    from reserva r,habitacion h 
+    join hotel h2 on h2.id =h.id_hotel 
+    where r.id_habitacion=h.id and h.id_hotel=1 And   month(fecha_reserva)=7 
+ 
+    
 delimiter $$
 CREATE TRIGGER iniciar_estado_habitacion
 AFTER INSERT on reserva
