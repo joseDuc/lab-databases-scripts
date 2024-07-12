@@ -1,5 +1,7 @@
 
    
+
+   
 drop schema if exists hospedaje;
 create schema if not exists hospedaje;
 use hospedaje;
@@ -58,8 +60,8 @@ id int auto_increment,
 id_habitacion smallint not null,
 id_cliente int not null,
 fecha_reserva datetime default now(),
-fecha_inicial datetime,
-fecha_final datetime,
+fecha_llegada datetime,
+fecha_salida datetime,
 id_estadoReserva tinyint,
 primary key(id),
 foreign key (id_habitacion) references habitacion(id),
@@ -76,7 +78,7 @@ id int auto_increment,
 id_reserva int not null,
 id_servicio smallint not null,
 id_estadoServicio tinyint,
-fecha_inicio datetime,
+fecha_inicio datetime default now(),
 fecha_realizado datetime,
 foreign key (id_reserva) references reserva(id),
 foreign key (id_servicio) references servicio(id),
@@ -93,7 +95,8 @@ start transaction;
 insert into estadohabitacion (nombre) values
 ('desocupada'),
 ('ocupada'),
-('deshabilitada');
+('deshabilitada'),
+('preparacion');
 
 insert into estadoreserva (nombre) values
 ('activa'),
@@ -117,7 +120,7 @@ insert into servicio (nombre) values
 
 insert into cliente (nombre,telefono) values
 ('José Martínez','931232345'),
-('Andrés Marcos','931232345'),
+('Andrés Marcos','931232346'),
 ('Joaquín Bellota','931232385'),
 ('María López','931232396');
 
@@ -136,7 +139,7 @@ insert into habitacion (id_hotel,id_planta,numero,id_estadoHabitacion) values
 (2,5,'102',1);
    
 delimiter //
-CREATE TRIGGER iniciar_estado_habitacion
+CREATE TRIGGER iniciar_estadoHabitacion_estadoReserva
 AFTER INSERT on reserva
 FOR EACH ROW
 	BEGIN
@@ -144,8 +147,35 @@ FOR EACH ROW
        	SET id_estadoHabitacion = 2
      	WHERE id = new.id_habitacion;
     end //
+
+    -- ******************************************
+   
+
     
+CREATE TRIGGER cambiar_estadoHabitacion_estadoReserva
+after update on reserva
+FOR EACH row
+begin
+	if new.id_estadoreserva <> old.id_Estadoreserva   then 
+	        if new.id_estadoReserva =1 then 
+			UPDATE habitacion h
+		       SET h.id_estadoHabitacion = 2
+		    WHERE h.id = new.id_habitacion;
+		elseif new.id_estadoReserva =2 then 
+			UPDATE habitacion h
+		       SET h.id_estadoHabitacion = 1
+		    WHERE h.id = new.id_habitacion;
+		 elseif new.id_estadoReserva =3 then 
+			UPDATE habitacion h
+		       SET h.id_estadoHabitacion = 4
+		    WHERE h.id = new.id_habitacion;
+		end if;
+	end if;
+end //
+
 delimiter ;
+
+
 insert into reserva (id_habitacion,id_cliente,id_estadoReserva) values
 (1,1,1),
 (2,2,1),
@@ -159,7 +189,8 @@ insert into reserva_servicio (id_reserva,id_servicio,id_estadoServicio) values
 (1,2,1),
 (1,1,2),
 (3,4,1),
-(4,3,1);
+(4,3,1),
+(4,1,1);
 
     
 commit;
@@ -168,20 +199,20 @@ rollback;
    
 
    
-     -- ocupacion 
-    select h.id, h2.nombre as hotel ,p.numero ,p.nombre as nombre_planta, e.nombre as estado, c.nombre as  huesped,c.telefono 
+     -- ocupacion atendiendo 
+    select h.id, h2.nombre as hotel ,p.numero as planta ,p.nombre as nombre_planta, e.nombre as estado, c.nombre as  huesped,c.telefono 
     from habitacion h 
     join hotel h2 on h2.id =h.id_hotel 
     join planta p on p.id=h.id_planta  
     join estadohabitacion e on e.id =h.id_estadoHabitacion 
     join reserva r on r.id_habitacion= h.id
     join cliente c on c.id =r.id_cliente
-    where r.id_estadoReserva =1
    	order by h2.nombre desc ;
 
       
+   
 	   -- actividad servicios
-    select c.nombre as huesped , h2.nombre as hotel, h.numero  as núm_habitacion, s.nombre as servicio , e.nombre as estado, rs.fecha_inicio,rs.fecha_realizado 
+    select c.nombre as huesped , h2.nombre as hotel,p.numero as planta  , h.numero  as habitacion, s.nombre as servicio , e.nombre as estado, rs.fecha_inicio,rs.fecha_realizado 
     from reserva_servicio rs 
     join reserva r on r.id =rs.id_reserva 
     join cliente c on c.id =r.id_cliente 
@@ -192,14 +223,29 @@ rollback;
     join hotel h2 on h2.id =h.id_hotel 
     order by h2.nombre;
     
+
     -- total reservas de hotel top 10   en julio (general)
     select h2.nombre ,count(*) as total_reservas
     from reserva r,habitacion h 
     join hotel h2 on h2.id =h.id_hotel 
-    where r.id_habitacion=h.id and month(fecha_reserva)=7
+    where r.id_habitacion=h.id and month(fecha_reserva)=7 and r.id_estadoReserva =1
    	group by h2.nombre 
   	order by total_reservas desc
   	limit 10;
  
-    
+    -- consulta anidada servcios de masaje para hoy en todos los hoteles
+  	select h2.nombre as hotel, p.numero as planta, h.numero as habitacion,  c.nombre as huesped, s.nombre as servicio , rs.fecha_inicio ,e.nombre as estado
+  	from reserva_servicio rs 
+  	join reserva r on r.id =rs.id_reserva 
+  	join habitacion h on h.id=r.id_habitacion 
+  	join hotel h2 on h2.id=h.id_hotel 
+  	join planta p on p.id =h.id_planta 
+  	join cliente c on c.id =r.id_cliente 
+  	join servicio s on s.id =rs.id_servicio 
+  	join estadoservicio e on e.id=rs.id_estadoServicio 
+  	where rs.id  in (
+  		select rs2.id from reserva_servicio rs2 where rs2.id_servicio=1 and date(rs2.fecha_inicio )=current_date() or rs2.fecha_inicio is null
+  	);
+  	
 
+	
