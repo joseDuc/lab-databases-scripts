@@ -1,7 +1,6 @@
 
    
 
-   
 drop schema if exists hospedaje;
 create schema if not exists hospedaje;
 use hospedaje;
@@ -43,6 +42,7 @@ id smallint auto_increment,
 nombre varchar(20) not null,
 primary key(id)
 );
+
 create table cliente(
 id int auto_increment,
 nombre varchar(100) not null,
@@ -50,6 +50,15 @@ telefono varchar(20) not null,
 email varchar(50),
 primary key(id)
 );
+
+-- relación uno/uno al cliente y cliente al clientePerfil relacion uno/uno un cliente solo un perfil, un perfil solo un cliente
+create table clientePerfil(
+	id_cliente int,
+	descripcion varchar(500),
+	primary key(id_cliente),
+	foreign key (id_cliente) references cliente(id)
+);
+-- ***********************************************************************
 create table estadoReserva(
 id tinyint auto_increment,
 nombre varchar(20) not null,
@@ -88,6 +97,46 @@ primary key(id)
 
 alter table reserva add fecha_CheckIn datetime;
 alter table reserva add fecha_CheckOut datetime;
+
+delimiter //
+
+CREATE TRIGGER iniciar_estadoHabitacion_estadoReserva
+AFTER INSERT on reserva
+FOR EACH row
+	begin
+		UPDATE Habitacion
+       	SET id_estadoHabitacion = 2
+     	WHERE id = new.id_habitacion;
+    end; //
+	
+    -- ******************************************
+   
+
+    
+CREATE TRIGGER cambiar_estadoHabitacion_estadoReserva
+after update  on reserva
+FOR EACH row
+begin
+	if new.id_estadoreserva <> old.id_Estadoreserva   then 
+
+	    if new.id_estadoReserva =1 then 
+			UPDATE habitacion h
+		       SET h.id_estadoHabitacion = 2
+		    WHERE h.id = new.id_habitacion;
+		elseif new.id_estadoReserva =2 then 
+			UPDATE habitacion h
+		       SET h.id_estadoHabitacion = 1
+		    WHERE h.id = new.id_habitacion;
+		elseif new.id_estadoReserva =3 then 
+			UPDATE habitacion h
+		       SET h.id_estadoHabitacion = 4
+		    WHERE h.id = new.id_habitacion;
+		end if;
+	end if;
+end; //
+
+delimiter ;
+
 
 
 start transaction;
@@ -138,42 +187,6 @@ insert into habitacion (id_hotel,id_planta,numero,id_estadoHabitacion) values
 (2,4,'101',1),
 (2,5,'102',1);
    
-delimiter //
-CREATE TRIGGER iniciar_estadoHabitacion_estadoReserva
-AFTER INSERT on reserva
-FOR EACH ROW
-	BEGIN
-		UPDATE Habitacion
-       	SET id_estadoHabitacion = 2
-     	WHERE id = new.id_habitacion;
-    end //
-
-    -- ******************************************
-   
-
-    
-CREATE TRIGGER cambiar_estadoHabitacion_estadoReserva
-after update on reserva
-FOR EACH row
-begin
-	if new.id_estadoreserva <> old.id_Estadoreserva   then 
-	        if new.id_estadoReserva =1 then 
-			UPDATE habitacion h
-		       SET h.id_estadoHabitacion = 2
-		    WHERE h.id = new.id_habitacion;
-		elseif new.id_estadoReserva =2 then 
-			UPDATE habitacion h
-		       SET h.id_estadoHabitacion = 1
-		    WHERE h.id = new.id_habitacion;
-		 elseif new.id_estadoReserva =3 then 
-			UPDATE habitacion h
-		       SET h.id_estadoHabitacion = 4
-		    WHERE h.id = new.id_habitacion;
-		end if;
-	end if;
-end //
-
-delimiter ;
 
 
 insert into reserva (id_habitacion,id_cliente,id_estadoReserva) values
@@ -192,13 +205,22 @@ insert into reserva_servicio (id_reserva,id_servicio,id_estadoServicio) values
 (4,3,1),
 (4,1,1);
 
-    
+
 commit;
 
 rollback;
    
+-- transacion con bloqueo de registro por control de concurrencia
+start transaction;
 
-   
+
+	update reserva set id_estadoReserva =3 where id= 3 ; 
+
+commit;
+
+rollback;
+-- ******************************************************************************************************
+
      -- ocupacion atendiendo 
     select h.id, h2.nombre as hotel ,p.numero as planta ,p.nombre as nombre_planta, e.nombre as estado, c.nombre as  huesped,c.telefono 
     from habitacion h 
@@ -248,4 +270,10 @@ rollback;
   	);
   	
 
-	
+
+
+
+
+
+
+
