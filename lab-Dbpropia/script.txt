@@ -1,0 +1,119 @@
+drop schema if exists bibioteca_1;
+create schema if not exists bibioteca_1;
+
+use bibioteca_1;
+
+create table genero(
+id int auto_increment,
+nombre varchar(50),
+primary key(id)
+);
+
+create table editor(
+id int auto_increment,
+nombre varchar(50),
+primary key(id)
+);
+create table libro(
+id int auto_increment,
+titulo varchar(50),
+anio_publicación int,
+id_genero int,
+id_editor int,
+primary key(id),
+foreign key (id_genero) references genero(id),
+foreign key (id_editor) references editor(id)
+);
+
+create table autor(
+id int auto_increment,
+nombre varchar (50),
+primary key(id)
+);
+
+create table libro_autor(
+id_libro int,
+id_autor int,
+primary key(id_libro,id_autor),
+foreign key (id_libro) references libro(id),
+foreign key (id_autor) references autor(id)
+);
+
+create table ejemplarEstado(
+id tinyint auto_increment,
+nombre varchar(20),
+primary key(id)
+);
+
+create table ubicacion(
+id int auto_increment,
+seccion varchar(20),
+estanteria varchar(20),
+estante varchar(20),
+posicion smallint,
+primary key(id)
+);
+
+create table  libro_ejemplar(
+id int auto_increment,
+id_libro int,
+id_ejemplarEstado tinyint,
+id_ubicacion int,
+primary key(id),
+foreign key (id_libro) references libro(id),
+foreign key (id_ejemplarEstado) references ejemplarEstado(id),
+foreign key (id_ubicacion) references ubicacion(id)
+);
+
+insert into editor (nombre) values 
+('Santillana'),
+('Planeta');
+
+insert genero (nombre) values
+('terror'),
+('ciencia ficción'),
+('humor');
+
+insert autor (nombre) values
+('Luís Menéndez'),
+('Hernesto La fuente'),
+('Ignacio Fuertes');
+
+insert into ejemplarestado (nombre) values 
+('disponible'),
+('prestado'),
+('deteriorado');
+
+
+insert into ubicacion (seccion,estanteria,estante,posicion) values
+('este','central','superio 2º',32),
+('oeste','izquierdo','superio 3º',32),
+('norte','izquierdo','medio 2º',32),
+('sur','derecho','inferior 1º',32);
+
+insert into libro (titulo,anio_publicación,id_genero,id_editor) values
+('La ceñida ceja',2021,1,1),
+('El temblor del desconocido',2014,2,2),
+('El lobo feroz',2022,3,2);
+
+insert into libro_autor (id_libro,id_autor) values
+(1,1),
+(1,2),
+(2,3);
+
+insert into libro_ejemplar (id_libro,id_ejemplarEstado,id_ubicacion) values
+(1,1,2),
+(1,1,3),
+(2,2,4),
+(1,2,2);
+
+select le.id, l.titulo , e.nombre as editor ,g.nombre as genero, l.anio_publicación,e2.nombre as estado
+from libro_ejemplar le 
+join libro l on l.id =le.id_libro 
+join genero g on g.id =l.id_genero 
+join editor e on e.id =l.id_editor 
+join ejemplarestado e2 on e2.id =le.id_ejemplarEstado 
+order by titulo
+;
+
+
