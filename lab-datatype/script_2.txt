@@ -1,0 +1,77 @@
+drop schema if exists agenda;
+create schema if not exists agenda;
+
+use agenda;
+
+
+create table contacto(
+id int auto_increment,
+nombre varchar(50),
+telefono varchar(15),
+direccion varchar(255),
+email varchar(50),
+primary key(id)
+);
+
+create table tipoEvento(
+id tinyInt auto_increment,
+nombre varchar(20),
+primary key(id)
+);
+
+create table cita(
+id int auto_increment,
+id_tipoEvento tinyint,
+hora datetime,
+primary key(id),
+foreign key(id_tipoEvento) references tipoEvento(id)
+);
+
+create table cita_obs(
+id_cita int,
+texto varchar(255),
+primary key (id_cita),
+foreign key(id_cita) references cita(id)
+);
+
+create table cita_contacto(
+id_cita int,
+id_contacto int,
+primary key (id_cita,id_contacto),
+foreign key(id_cita) references cita(id),
+foreign key(id_contacto) references contacto(id)
+);
+
+insert into contacto (contacto.nombre , contacto.telefono , contacto.direccion , contacto.email ) values
+('juani La pera','93 2343434','Av/Montserrat, 13 El garrigués', 'qqqqqqqqqqqqq@eeee.com'),
+('pedro garcía','93 3456767','C/Bajada, 43 Les Cuguelles', 'eeeeee@yyyy.com'),
+('andrés guijuelo','93 4553445','Av/Montserrat, 13 El garrigués', 'sssssss@www.com'),
+('alfonso lópez','93 2545645','Av/Montserrat, 13 El garrigués', 'jjjjjjjjj@xxx.com'),
+('alberto montés','93 4532334','Av/Montserrat, 13 El garrigués', 'ttttttttttt@eeee.com');
+insert into tipoevento (nombre) values
+('telemático'),
+('presencial');
+
+insert into cita (id_tipoEvento,hora) values
+(2,now()),
+(1,now());
+
+insert into cita_obs (id_cita,texto) values
+(1,'será una reunión breve sobre los problemas más importantes de la escalera'),
+(2,'personal. aclarar motivos de la discordia');
+
+insert into cita_contacto (id_cita,id_contacto) values
+(1,1),
+(1,4),
+(1,3),
+(2,1),
+(2,3);
+
+select c.id , t.nombre as tipo, c.hora, co.texto as observación, c2.nombre as contacto 
+from cita c
+join tipoevento t on T.id =C.id_tipoEvento 
+join cita_obs co on CO.id_cita =C.id 
+join cita_contacto cc ON CC.id_cita =C.id 
+join contacto c2 on C2.id =CC.id_contacto 
+where date(C.HORA) =current_date(); 
+

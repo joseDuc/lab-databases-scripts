@@ -1,0 +1,43 @@
+-- crea el esquema
+DROP DATABASE  IF EXISTS   supermercado  ;
+
+CREATE DATABASE IF NOT EXISTS supermercado;
+USE supermercado;
+
+-- id incremental unico con una capacidad aceptable de clientes
+-- nombre con 50 bytes suficientes para un nombre completo
+-- direccion con 255 bytes suficientes para una calle, poblacion, provincia y pais
+-- telefono con 20 se puede expresar cualquier indicativo de país. etc
+-- email con 50 sería parecido a un nombre
+-- el id como pk
+create table cliente(
+id int auto_increment, 
+nombre varchar(50), 
+direccion varchar(255), 
+telefono varchar (20), 
+email varchar(50),
+PRIMARY KEY(id)
+);
+
+-- analogo de cliente (justificacion similar)
+create table proveedor (
+id int auto_increment, 
+nombre varchar(50),
+direccion varchar(255),
+telefono varchar (20), 
+email varchar(50),
+PRIMARY KEY(id)
+);
+
+-- producto puede haber infinidad espero que con int haya bastante si no un bigInt
+-- nombre como puede tener mas especificaciones le dejo 100 bytes
+-- precio 8 bytes creo puede expresar un precio muy alto
+-- el id_proveedor igual su relacion en la referencia proveedor.id
+create table producto(
+id int auto_increment, 
+nombre varchar(100), 
+precio decimal (8,2), 
+id_proveedor int,
+primary key(id),
+foreign key (id_proveedor) references proveedor(id)
+); 
