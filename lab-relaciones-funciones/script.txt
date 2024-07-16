@@ -1,0 +1,192 @@
+drop schema if exists empresa;
+create schema if not exists empresa;
+
+use empresa;
+
+create table departamento(
+id smallint  auto_increment,
+nombre varchar(100) not null,
+primary key(id)
+);
+
+create table empleado(
+id int auto_increment,
+nombre varchar(100) not null ,
+salario decimal(10,2) not null,
+id_departamento smallint,
+primary key(id)
+-- despues agregare el constraint correspondiente
+-- para evitar duplicidad
+-- foreign key (id_departamento) references departamento(id)
+);
+-- pienso que la relación many_to_one ya quedaría establecida de la forma inmediatamente anterior
+-- un empleado sólo puede relacionarse con un dpto y un departamento puede hacerlo con varios
+
+create table proyecto(
+id int auto_increment,
+nombre varchar(100) not null,
+primary key(id)
+);
+
+-- relacion many_to_many entre empleado y proyecto
+create table empleado_proyecto(
+id_empleado int,
+id_proyecto int,
+primary key(id_empleado,id_proyecto),
+foreign key (id_empleado) references empleado(id),
+foreign key (id_proyecto) references proyecto(id)
+);
+
+-- relacion one_to_one con empleado
+create table empleado_detalle(
+id_empleado int,
+direccion varchar(255) not null,
+telefono varchar(20) not null,
+primary key(id_empleado),
+foreign key (id_empleado) references empleado(id)
+);
+
+
+
+delimiter $$
+create function calcula_bonificacion(id_empleado int) returns decimal(10,2)
+deterministic
+begin
+	declare salario_base decimal(10,2);
+	declare bonificacion decimal(10,2);
+	declare total decimal(10,2);
+
+	select salario into salario_base from empleado where id=id_empleado;
+	set bonificacion=salario_base * 0.1;
+	set total=salario_base+bonificacion;
+	return total;
+end$$
+
+
+
+delimiter ;
+
+
+alter table empleado add constraint fk_departamento_empleado
+foreign key(id_departamento) references departamento(id);
+
+
+alter table empleado drop constraint  fk_departamento_empleado;
+
+-- el ejercicio dice que la elimine, pero la vuelvo a crear porque la tabla lo necesita
+alter table empleado add constraint fk_departamento_empleado
+foreign key(id_departamento) references departamento(id);
+
+
+-- parte II Crear relacion bidireccional empleado_departamento
+create table empleado_departamento(
+id_empleado int ,
+id_departamento smallint,
+primary key (id_empleado,id_departamento),
+constraint fk_empleado_empleado_departamento 
+foreign key(id_empleado) references empleado(id),
+constraint fk_departamento_empleado_departamento
+foreign key(id_departamento) references departamento(id)
+);
+
+-- insertar registros cuando inserte empleados
+delimiter &&
+create trigger insertar_empleado_departamento
+after insert on empleado
+for each row
+begin
+	if new.id_departamento is not null then
+		insert into empleado_departamento (id_empleado,id_departamento) values 
+		(new.id,new.id_departamento);
+	end if;
+end&&
+delimiter ;
+
+
+-- many_to_many empleado_proyecto es bidireccional porque a través de ella tanto empleado como proyecto pueden relacionearse
+
+-- one_to_one empleado_detalle puede relacionarse con el empleado referido y empleado puede relacionarse con registro de detalles, 
+alter table empleado add id_detalle int;
+alter table empleado add constraint fk_empleado_detalle 
+foreign key (id_detalle) references empleado_detalle(id_empleado);
+-- one_to_one de empleado_beneficio
+-- mi opcion sería hacer id_empleado primary key, pero el auto_increment quiere ser pk
+create table beneficio(
+id int auto_increment,
+id_empleado int unique,
+descripcion varchar(255),
+primary key(id),
+constraint fk_beneficio_empleado foreign key (id_empleado) references empleado (id)
+);
+
+
+-- lleno tablas
+INSERT INTO departamento (nombre) VALUES
+('Recursos Humanos'),
+('Finanzas'),
+('IT'),
+('Marketing'),
+('Ventas'),
+('Operaciones'),
+('Investigación y Desarrollo'),
+('Atención al Cliente'),
+('Compras'),
+('Diseño'),
+('Legal');
+
+-- Verificar los datos
+SELECT * FROM departamento;
+
+INSERT INTO empleado (nombre, salario, id_departamento) values
+('Juan Pérez', 3000.00,1),
+('Ana Gómez', 3200.50,2),
+('Luis Fernández', 2800.75,3),
+('María López', 3500.00,4),
+('Carlos Sánchez', 4000.00,5),
+('Elena Martínez', 3100.25,6),
+('Pedro Rodríguez', 3300.00,7),
+('Laura García', 2900.50,8),
+('Jorge González', 3700.00,9),
+('Marta Jiménez', 3600.75,10);
+
+INSERT INTO empleado_detalle (id_empleado, direccion, telefono) VALUES
+(1, 'Calle Falsa 123, Ciudad A', '123-456-7890'),
+(2, 'Avenida Siempre Viva 742, Ciudad B', '098-765-4321'),
+(3, 'Calle Mayor 45, Ciudad C', '111-222-3333'),
+(4, 'Plaza del Sol 9, Ciudad D', '444-555-6666'),
+(5, 'Calle de la Luna 3, Ciudad E', '777-888-9999'),
+(6, 'Calle de la Estrella 17, Ciudad F', '222-333-4444'),
+(7, 'Calle del Río 22, Ciudad G', '555-666-7777'),
+(8, 'Calle del Mar 13, Ciudad H', '888-999-0000'),
+(9, 'Avenida del Bosque 7, Ciudad I', '333-444-5555'),
+(10, 'Calle del Valle 19, Ciudad J', '666-777-8888');
+
+
+update empleado e
+join empleado_detalle ed on ed.id_empleado =e.id 
+set e.id_detalle = ed.id_empleado;
+
+insert into proyecto (nombre) values 
+("recontrucción arco triunfo"),
+("construcción edificio miramar"),
+("construcción puente Del Sol");
+
+insert into empleado_proyecto values
+(7,1),
+(7,2),
+(10,2);
+
+select p.nombre as proyecto,e.nombre as empleado ,d.nombre as departamento
+from proyecto p  
+join empleado_proyecto ep on ep.id_proyecto =p.id 
+join empleado e on e.id =ep.id_empleado
+join departamento d on d.id =e.id_departamento 
+;
+
+
+select e.nombre as empleado ,d.nombre as departamento ,p.nombre as proyecto
+from empleado e 
+join departamento d on d.id =e.id_departamento 
+join empleado_proyecto ep on ep.id_empleado =e.id 
+join proyecto p on p.id =ep.id_proyecto 
+;
