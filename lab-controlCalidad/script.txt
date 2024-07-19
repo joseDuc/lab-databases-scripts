@@ -1,0 +1,211 @@
+
+drop schema if exists escuela;
+create schema if not exists escuela;
+
+use escuela;
+
+
+-- CREATE TABLE Estudiantes (
+--   Nombre VARCHAR(100) primary key,
+--    Cursos VARCHAR(255) -- Aquí almacenamos múltiples cursos en una sola columna
+-- );
+
+
+-- He de separar los cursos del estudiante y crear relacion many_to_many
+create table estudiante(
+	id int auto_increment,
+	nombre varchar(50) not null,
+	primary key(id)
+);
+
+create table curso(
+	id int auto_increment,
+	nombre varchar(50) not null,
+	primary key(id)
+);
+
+create table estudiante_curso(
+	id_estudiante int,
+	id_curso int,
+	primary key(id_estudiante,id_curso),
+	constraint id_estudiante_estudiante_curso foreign key(id_estudiante) references estudiante(id),
+	constraint id_curso_estudiante_curso foreign key(id_curso) references curso(id)
+);
+
+insert into estudiante (nombre) values
+('Juan Pérez'),
+('Ana Gómez'),
+('Luis Rodríguez');
+
+insert into curso (nombre) values
+('Matemáticas'),
+('Historia'),
+('Física'),
+('Química'),
+('Biología');
+
+
+-- INSERT INTO Estudiantes (ID, Nombre, Cursos) VALUES
+-- (1, 'Juan Pérez', 'Matemáticas, Historia'),
+-- (2, 'Ana Gómez', 'Biología'),
+-- (3, 'Luis Rodríguez', 'Matemáticas, Física, Química');
+
+insert into estudiante_curso (id_estudiante, id_curso) values
+(1,1),
+(1,2),
+(2,5),
+(3,1),
+(3,3),
+(3,4);
+
+
+-- CREATE TABLE Productos (
+--  ID INT PRIMARY KEY,   Nombre VARCHAR(100),
+--   Categoría VARCHAR(100),
+--    Proveedor VARCHAR(100),
+--    Precio DECIMAL(10, 2),
+--    Proveedores VARCHAR(255) -- Almacenamos los nombres de múltiples proveedores
+-- );
+
+-- he de crear una tabla proveedors para poder crear un relacion many_to_many posteriormente
+create table proveedor(
+	id int auto_increment,
+	nombre varchar (50),
+	primary key(id)
+);
+
+insert into proveedor (nombre) values
+('prov_1'),
+('prov_2');
+
+create table producto(
+	id int auto_increment,
+	nombre varchar (50),
+	precio decimal(10,2),
+	primary key(id)
+);
+insert into producto (nombre,precio) values
+('prod_1',1.45),
+('prod_2',3.25),
+('prod_3',2.20),
+('prod_4',5.67);
+
+create table producto_proveedor(
+	id_producto int,
+	id_proveedor int,
+	primary key (id_producto,id_proveedor),
+	constraint id_producto_producto_proveedor foreign key(id_producto) references producto(id),
+	constraint id_proveedor_producto_proveedor foreign key(id_proveedor) references proveedor(id)
+);
+
+insert into producto_proveedor(id_producto,id_proveedor) values
+(1,1),
+(2,1),
+(3,1),
+(4,2);
+
+
+-- CREATE TABLE Clientes 
+--    ID INT PRIMARY KEY,
+--    Nombre VARCHAR(100),
+--    Email VARCHAR(100),
+--    Teléfonos VARCHAR(255), -- Almacenando múltiples números de teléfono en una sola columna
+--    Dirección VARCHAR(255)
+-- );
+
+-- he de separar los telefonos en otra tabla relacion one_to _many
+CREATE TABLE cliente(
+    id int auto_increment,
+    nombre VARCHAR(100),
+    email VARCHAR(100),
+    direccion VARCHAR(255),
+    primary key(id)
+    
+);
+
+insert into cliente (nombre,email,direccion) values
+('juan martínez','am@gmail','c/La lonja 11'),
+('pedro san juan','paj@gmail.com', 'av/ Las torres 150');
+
+create table telefonoCliente(
+	id int auto_increment,
+	id_cliente int,
+	telefono varchar(20),
+	primary key(id),
+	constraint id_cliente_telefonoCliente foreign key(id_cliente) references cliente(id)
+);
+
+insert into telefonoCliente (id_cliente,telefono) values
+(1,'23-345-45-45'),
+(1,'23-345-46-46'),
+(2,'23-345-66-38');
+
+
+-- CREATE TABLE Pedidos (
+--    ID INT PRIMARY KEY,
+--    Cliente VARCHAR(100),
+--    Fecha DATE,
+--    Productos VARCHAR(255), -- Almacena múltiples productos en una sola columna
+--    Cantidades VARCHAR(255), -- Almacena cantidades correspondientes en una sola columna
+--    Total DECIMAL(10, 2),
+--    Estado VARCHAR(50)
+-- );
+
+-- he de separar las variaciones del pedido en línea de pedido para agregar vaios productos relacion uno_to_many
+create table pedido(
+id int auto_increment,
+id_cliente int not null,
+fecha date not null,
+primary key(id),
+constraint id_cliente_pedido foreign key(id_cliente) references cliente(id)
+);
+
+insert into pedido (id_cliente,fecha) values
+(1,current_date),
+(2,current_date);
+
+-- separo el estado para crear un catálogo de estados para escalar su definición relacion uno_to_many
+create table pedidoEstado(
+id tinyint auto_increment,
+nombre varchar(50) not null,
+primary key(id)
+);
+
+insert into pedidoestado (nombre) values
+('por revisar'),
+('revisado'),
+('preparado'),
+('servido'),
+('anulado');
+
+create table pedidoLinea(
+id_pedido int,
+linea smallint,
+id_producto int not null,
+id_estado tinyint not null,
+cantidad decimal(8,2) not null,
+precio decimal(10,2) not null,
+primary key(id_pedido,linea),
+constraint id_pedido_pedidoLinea foreign key(id_pedido) references pedido(id),
+constraint id_producto_pedidoLinea foreign key(id_producto) references producto(id),
+constraint id_estado_pedidoLinea foreign key(id_estado) references pedidoEstado(id)
+);
+
+insert into pedidolinea (id_pedido, linea, id_producto, id_estado, cantidad, precio) values
+(1,1,1,1,10,1.50),
+(1,2,2,1,5,12.45),
+(2,1,3,1,2,55.40);
+
+select p.id as pedido,p2.linea,p4.nombre as estado , p3.nombre as producto, p2.cantidad , p2.precio , (p2.cantidad * p2.precio ) as total
+from pedido p 
+join pedidolinea p2 on p2.id_pedido =p.id 
+join producto p3 on p3.id =p2.id_producto 
+join pedidoestado p4 on p4.id =p2.id_estado 
+;
+
+select e.nombre as alumno, c.nombre as curso
+from estudiante e 
+join estudiante_curso ec on ec.id_estudiante =e.id 
+join curso c on c.id =ec.id_curso 
+order by e.nombre 
+;
