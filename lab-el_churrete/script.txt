@@ -1,3 +1,5 @@
+
+
 drop schema if exists el_churrete;
 create schema if not exists el_churrete;
 
@@ -515,11 +517,18 @@ begin
 end //
 -- fin function
 
---  CREATE function reservaMesaReservasPendientes ()
--- BEGIN
--- 	update mesa 
--- 	set id_estado=2	;
--- end //
+ CREATE function reservaMesaReservasPendientes () returns int
+ deterministic
+ begin
+	declare v int;
+ 	update mesa set id_estado =2
+	where id_estado=1 and id in (select id_mesa from cuenta_mesa 
+	where id_cuenta in(select id from cuenta 
+	where id in (select id from reserva where id_Estado=1 and date(fechaprevista )=current_date 
+	and horaprevista>= date_add(current_time(),interval -120 minute)
+	)));
+ 	return v;
+ end //
 -- fin function
  
 create function totalCuenta(id_cuentaDetalle int) returns decimal(10,2)
@@ -1432,13 +1441,16 @@ where p.id_entidad =1 and p.id_establecimiento =1 and z.id_usoZona =1 -- cliente
 
 
 
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++
+-- actividad de insercion de mas datos
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++
 -- incremento precioVP segun el precioUd de coste del articulo 
 update articulo set precioVP = precioUd * 3;
 
 -- inserta 2 reservas 
 insert into reserva (id_entidad,id_establecimiento,fecha,fechaprevista,horaprevista,plazas,id_estado) values
 (1,1,now(),date_add(current_date(), interval 1 day),'14:00',10,1),
-(1,1,now(),date_add(current_date(), interval 0 day),'15:30', 4,1);
+(1,1,now(),date_add(current_date(), interval 0 day),'21:30', 4,1);
 
 -- asigna mesas a la cuenta 1 (habiendo comprobado que estaran libres)
 insert into cuenta_mesa (id_cuenta,id_mesa) values
@@ -1506,22 +1518,40 @@ from cuentaDetalle cd
 join articulo a on a.id =cd.id_articulo 
 ;
 
-
-select r.id as reserva , r.fecha , r.fechaPrevista , r.horaPrevista ,p.nombre as planta, z.nombre as zona,  m.nombre as mesa
+select r.id as reserva , r.fecha as recepcion , r.fechaPrevista , r.horaPrevista ,p.nombre as planta, z.nombre as zona,  m.nombre as mesa, m2.nombre as estadoMesa, r2.nombre  as estadoReserva
 from reserva r 
 join cuenta c on c.id_reserva =r.id 
 join cuenta_mesa cm on cm.id_cuenta =c.id 
 join mesa m on m.id =cm.id_mesa 
 join zona z on z.id =m.id_zona 
 join planta p on p.id =z.id_planta 
+join mesaestado m2 on m2.id =m.id_estado 
+join reservaestado r2 on r2.id =r.id_estado 
 where r.id_estado=1
 order by r.id 
 ;
 
 -- media de gasto por persona
-select (sum(c2.cantidad*c2.precio)/c.plazas) as mediaPersonaGAsto
+select (sum(c2.cantidad*c2.precio)/c.plazas) as mediaPersonaGasto
 from cuenta c 
 join cuentadetalle c2 on c2.id_cuenta=c.id 
-where c.fechaSalida is not null
+where c.fechaSalida is not null and date(fechaEntrada)=current_date()  -- cuentas cerradas de hoy
 group by c.id ;
 
+-- media de gasto por persona en una cuenta 
+select (sum(c2.cantidad*c2.precio)/c.plazas) as mediaPersonaGasto
+from cuenta c 
+join cuentadetalle c2 on c2.id_cuenta=c.id 
+where c.id =1 -- sobre la cta 2
+group by c.id ;
+
+
+select reservaMesaReservasPendientes();
+
+-- llegan los clientes de la reserva 1 cuenta 1 y cambia el estado de mesa de reservado a ocupado
+update cuenta set fechaEntrada =now() where id=2;
+
+-- pagan y se marchan. Se cierra la cuenta
+update cuenta set fechasalida =now() where id=2;
+
+select date_add(current_time(),interval -120 minute) as TiempoAnticipacionReservaMesa;
