@@ -1,0 +1,1527 @@
+drop schema if exists el_churrete;
+create schema if not exists el_churrete;
+
+use el_churrete;
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-- como se quedó en última instancia, no es necesario hacer todas las relaciones bidireccioneales
+-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+-- one_to_many una entidad , varios establecimientos por entidad
+create table entidad(
+id tinyInt unsigned auto_increment,
+nombre varchar(50) not null unique,
+cif varchar(20) not null,
+administrador varchar(100) not null,
+id_establecimiento smallint unsigned, -- el establecimiento principal
+primary key (id)
+);
+
+-- mantengo una relacion de integridad con entidad
+create table establecimiento(
+id smallint unsigned auto_increment,
+id_entidad tinyint unsigned not null,
+alias varchar(50) not null unique,
+direccion varchar(255) not null,
+telefono varchar(20) not null,
+email varchar(50) not null,
+primary key(id),
+constraint fk_id_entidad_establecimiento foreign key(id_entidad) references entidad(id)
+);
+
+-- tabla original
+create table subCategoriaProducto(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null unique,
+primary key (id)
+);
+
+-- tabla original
+create table categoriaProducto(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null unique,
+primary key (id)
+);
+
+-- tabla original
+create table unidadDeMedida(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null unique,
+primary key(id)
+);
+
+-- one_to_many un producto para varios articulos
+create table producto (
+id smallint unsigned auto_increment,
+id_categoriaProducto tinyint unsigned not null,
+id_subCategoriaProducto  tinyint unsigned not null,
+id_unidadDeMedida tinyint unsigned not null,  
+nombre varchar(50) not null,
+descripcion varchar(100),
+primary key (id),
+constraint fk_id_categoriaProducto_producto foreign key (id_categoriaProducto) references categoriaProducto(id),
+constraint fk_id_subCategoriaProducto_producto foreign key (id_subCategoriaProducto) references subCategoriaProducto(id),
+constraint fk_id_unidadDeMedida_producto foreign key (id_unidadDeMedida) references unidadDeMedida(id)
+);
+
+-- tabla original
+create table platoOrden(
+id tinyint unsigned auto_increment,
+valor varchar(15) not null unique,
+primary key(id)
+);
+
+-- one_to_many un plato para varias cartas
+create table plato(
+id smallint unsigned auto_increment,
+id_platoOrden tinyint unsigned not null,
+nombre varchar(100) not null unique,
+descripcion varchar(100),
+preparacion text,
+horasPrevias decimal(5,2),
+tiempoEjecucion decimal (5,2),
+primary key(id),
+constraint  fk_id_platoOrden_plato foreign key (id_platoOrden) references platoOrden(id)
+);
+
+-- many_to_many varios platos con varios ingredientes
+create table ingredientePlato(
+id_plato smallint unsigned,
+id_producto smallint unsigned,
+id_unidadDeMedida tinyint unsigned not null,  
+cantidad decimal(8,2) not null,
+orden tinyint not null,
+primary key(id_plato,id_producto),
+constraint fk_id_plato_ingredientePlato foreign key (id_plato) references plato(id),
+constraint fk_id_producto_ingredientePlato foreign key (id_producto) references producto(id),
+constraint fk_id_unidadDeMedida_ingredientePlato foreign key (id_unidadDeMedida) references unidadDeMedida(id)
+);
+
+-- many_to_one porque varias cartas para una entidad
+create table carta(
+id smallint unsigned auto_increment,
+id_entidad tinyInt unsigned,
+nombre varchar (20) not null,
+fecha date not null,
+inicio date,
+fin date,
+primary key(id)
+);
+
+-- many_to_many varios platos en varias tablas
+create table carta_plato(
+id_carta smallint unsigned,
+id_plato smallint unsigned,
+primary key(id_carta,id_plato),
+constraint fk_id_carta_carta_plato foreign key (id_carta) references carta(id),
+constraint fk_id_plato_carta_plato foreign key (id_plato) references plato(id)
+);
+
+-- one_to_many un proveedor varios articulos	
+create table proveedor(
+id smallint unsigned auto_increment,
+id_tipoProveedor tinyint unsigned,
+nombre varchar(50) not null unique,
+cif varchar(20),
+direccion varchar(255),
+telefono varchar(20),
+email varchar(50) not null,
+contacto varchar(50),
+primary key(id)
+);
+--
+-- many_to_many recoge varios productos de varios proveedores
+create table producto_proveedor(
+id_producto smallint unsigned,
+id_proveedor smallint unsigned,
+primary key (id_producto,id_proveedor),
+constraint fk_id_producto_producto_proveedor foreign key (id_producto) references producto(id),
+constraint fk_id_proveedor_producto_proveedor foreign key (id_proveedor) references proveedor(id)
+);
+
+-- tabla original
+create table tipoEnvase(
+id smallint unsigned auto_increment,
+nombre varchar(20) not null unique,
+primary key(id)
+);
+
+-- many_to_many varios articulos con varios productos
+create table articulo(
+id int unsigned auto_increment,
+id_producto smallint unsigned not null,
+id_proveedor smallint unsigned not null,
+id_tipoEnvase smallint unsigned not null,  
+nombre varchar(50) not null,
+envaseUds smallint not null,
+minDisponible decimal(10,2),
+precioUd decimal(10,2),
+precioVP decimal(10,2),
+primary key(id),
+constraint fk_id_producto_articulo_proveedor_ foreign key (id_producto) references producto(id),
+constraint fk_id_proveedor_articulo_proveedor foreign key (id_proveedor) references proveedor(id),
+constraint fk_id_tipoEnvase_articulo_proveedor foreign key (id_tipoEnvase) references tipoEnvase(id)
+);
+
+-- many_to_many varios almacenes por varias entidades
+create table almacen(
+id smallint auto_increment,
+id_entidad tinyint unsigned not null,
+id_establecimiento smallint unsigned not null,
+nombre varchar(50) not null,
+primary key(id),
+constraint fk_id_entidad_almacen foreign key (id_entidad) references entidad(id),
+constraint fk_id_establecimiento_almacen foreign key (id_establecimiento) references establecimiento(id)
+);
+
+-- many_to_many varias ubicaciones con varios almacenes
+create table ubicacionEnAlmacen(
+id int auto_increment,
+id_almacen smallint not null,
+estanteria tinyint not null,
+estante tinyint not null,
+posicion tinyint not null,
+primary key(id),
+constraint fk_id_almacen_ubicacionEnAlmacen foreign key (id_almacen) references almacen(id)
+);
+
+-- many_to_many varios pedidos varios proveedores
+create table pedidoProveedor(
+id int unsigned auto_increment,
+id_entidad tinyInt unsigned,
+id_establecimiento smallint unsigned,
+id_proveedor smallint unsigned not null,
+fecha datetime not null,
+primary key (id,id_establecimiento),
+constraint fk_id_entidad_pedidoProveedor foreign key (id_entidad) references entidad(id),
+constraint fk_id_establecimiento_pedidoProveedor foreign key (id_establecimiento) references establecimiento(id),
+constraint fk_id_proveedor_pedidoProveedor foreign key (id_proveedor) references proveedor(id)
+);
+
+-- many_to_many varios detalles varios pedidos
+create table pedidoProveedor_detalle(
+id_pedido int unsigned,
+linea smallint unsigned,
+id_articulo int unsigned not null,
+cantidad smallint not null,
+precioUd decimal(10,2) not null,
+primary key(id_pedido,linea),
+constraint fk_id_pedido_pedidoProveedor_detalle foreign key (id_pedido) references pedidoProveedor(id),
+constraint fk_id_articulo_pedidoProveedor_detalle foreign key (id_articulo) references articulo(id)
+);
+
+-- many_to_many varios albaranes varios proveedores
+create table albaranProveedor(
+id int auto_increment,
+id_entidad tinyInt unsigned not null,
+id_establecimiento smallint unsigned not null,
+id_proveedor smallint unsigned not null,
+fecha datetime not null,
+primary key(id),
+constraint fk_id_entidad_albaranProveedor foreign key (id_entidad) references entidad(id),
+constraint fk_id_establecimiento_albaranProveedor foreign key (id_establecimiento) references establecimiento(id),
+constraint fk_id_proveedor_albaranProveedor foreign key (id_proveedor) references proveedor(id)
+);
+
+-- many_to_many varios detalles varios proveedores
+create table albaranProveedor_detalle(
+id_albaran int,
+linea smallint unsigned,
+id_pedido int unsigned,
+pedidoLinea smallint unsigned,
+id_articulo int unsigned not null,
+cantidad int not null,
+precioUd decimal (10,2) not null,
+primary key(id_albaran, linea),
+constraint fk_id_albaran_albaranProveedor_detalle foreign key (id_albaran) references albaranProveedor(id)
+);
+
+-- many_to_many varios lotes varios articulos
+create table loteArticulo(
+id int unsigned auto_increment,
+id_entidad tinyInt unsigned not null,
+id_establecimiento  smallint unsigned not null,
+id_albaran int,
+albaranLinea smallint unsigned,
+id_articulo int unsigned,
+fecha datetime not null,
+caducidad date,
+loteFabricante varchar(20),
+primary key(id),
+constraint fk_id_entidad_loteArticulo foreign key (id_entidad) references entidad(id),
+constraint fk_id_articulo_loteArticulo foreign key (id_articulo) references articulo(id),
+constraint fk_id_albaran_loteArticulo foreign key (id_albaran,albaranLinea) references albaranProveedor_detalle(id_albaran,linea)
+);
+
+-- many_to_many varios lotes varias ubicaciones
+create table loteUbicacion(
+id_lote int unsigned,
+id_almacen smallint,
+entrada decimal(10,2) not null,
+reservado decimal(10,2),
+consumido decimal(10,2),
+primary key(id_lote,id_almacen),
+constraint fk_id_lote_loteUbicacion foreign key (id_lote) references loteArticulo(id),
+constraint fk_id_almacen_loteUbicacion foreign key (id_almacen) references almacen(id)
+);
+
+-- many_to_many varias plantas varios establecimientos
+create table planta(
+id tinyint unsigned auto_increment,
+id_entidad tinyInt unsigned not null,
+id_establecimiento smallint unsigned not null,
+nombre varchar(20),
+valor tinyint not null,
+primary key(id),
+constraint fk_id_entidad_planta foreign key (id_entidad) references entidad(id),
+constraint fk_id_establecimiento_planta foreign key (id_establecimiento) references establecimiento(id)
+);
+
+-- tabla original
+create table usoZona(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null,
+primary key(id)
+);
+
+-- many_to_many varias zonas varias plantas
+create table zona(
+id tinyint unsigned auto_increment,
+id_planta tinyint unsigned not null, 
+id_usoZona tinyint unsigned not null, 
+nombre varchar(20) not null,
+areaMetros decimal (8,2),
+primary key(id),
+constraint fk_id_planta_zona foreign key (id_planta) references planta(id),
+constraint fk_id_usoZona_zona foreign key (id_usoZona) references usozona(id)
+);
+
+-- tabla original
+create table mesaEstado(
+id tinyint auto_increment,
+nombre varchar (20) not null,
+primary key(id)
+);
+
+-- many_to_many varias mesas varios zonas
+create table mesa(
+id int unsigned auto_increment,
+id_zona tinyint unsigned not null,
+id_estado tinyint not null,
+nombre varchar(20) not null,
+plazas smallint not null, 
+primary key(id),
+constraint fk_id_zona_mesa foreign key (id_zona) references zona(id),
+constraint fk_id_estado_mesa foreign key (id_estado) references mesaestado(id)
+);
+
+-- tabla original
+create table temporada(
+id tinyint auto_increment,
+nombre varchar(20) not null,
+diaInicio tinyint not null,
+mesInicio tinyint not null,
+diaFin tinyint not null,
+mesFin tinyint not null,
+primary key(id)
+);
+
+-- many_to_many varios turnos varias temporadas
+create table turno(
+id tinyint unsigned auto_increment,
+id_temporada tinyint not null,
+orden tinyint not null,
+inicio time not null,
+fin time not null,
+festivo bool not null,
+primary key(id),
+constraint fk_id_temporada_turno foreign key (id_temporada) references temporada(id)
+);
+
+-- many_to_many varios jornadas varios turnos
+create table jornadaTurno(
+fecha date,
+id_turno tinyint unsigned,
+primary key (fecha,id_turno),
+constraint fk_id_turno_jornadaTurno foreign key (id_turno) references turno(id)
+);
+
+-- tabla original
+create table cargo(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null,
+orden tinyint unsigned not null,
+primary key(id)
+);
+
+-- tabla original
+create table personal(
+id smallint unsigned auto_increment,
+nombre varchar(50) not null,
+telefono varchar (20) not null,
+primary key (id)
+);
+
+-- many_to_many varios establecimientos varias personas
+create table establecimiento_personal(
+id_establecimiento  smallint unsigned,
+id_personal smallint unsigned,
+primary key(id_establecimiento,id_personal),
+constraint fk_id_establecimiento_establecimiento_personal foreign key (id_establecimiento) references establecimiento(id),
+constraint fk_id_personal_establecimiento_personal foreign key (id_personal) references personal(id)
+);
+
+-- many_to_many varios cargos varias personas
+create table cargo_personal(
+id_cargo tinyint unsigned,
+id_personal  smallint unsigned,
+primary key(id_cargo,id_personal),
+constraint fk_id_cargo_cargo_personal foreign key (id_cargo) references cargo(id),
+constraint fk_id_personal_cargo_personal foreign key (id_personal) references personal(id)
+);
+
+-- many_to_many varias jornadas varias personas
+create table jornadaTurno_personal(
+fecha date,
+id_establecimiento smallint unsigned,
+id_turno tinyint unsigned,
+id_personal smallint unsigned,
+id_zona tinyint unsigned not null,
+primary key(fecha,id_establecimiento,id_turno,id_personal),
+constraint fecha_jornadaTurno_personal foreign key (fecha,id_turno) references jornadaTurno(fecha,id_turno),
+constraint fk_id_personal_jornadaTurno_personal foreign key (id_personal) references personal(id),
+constraint fk_id_zona_jornadaTurno_personal foreign key (id_zona) references zona(id)
+);
+
+-- tabla original
+create table reservaEstado(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null,
+primary key(id)
+);
+
+-- many_to_many varias reservas varias cuentas
+create table reserva (
+id int unsigned auto_increment,
+id_entidad tinyInt unsigned not null,
+id_establecimiento smallint unsigned not null, 
+fecha datetime not null,
+fechaPrevista date not null,
+horaPrevista time not null,
+plazas smallint not null,
+id_estado tinyint unsigned not null,
+primary key(id),
+constraint fk_id_entidad_reserva foreign key (id_entidad) references entidad(id),
+constraint fk_id_establecimiento_reserva foreign key (id_establecimiento) references establecimiento(id),
+constraint fk_id_estado_reserva foreign key (id_estado) references reservaEstado(id)
+);
+
+-- many_to_many varias cuentas varias lineas de detalle y de mesas ocupadas
+create table cuenta(
+id int unsigned auto_increment,
+id_entidad  tinyInt unsigned not null,
+id_establecimiento smallint unsigned not null,
+id_reserva int unsigned,
+fechaEntrada datetime,
+fechaSalida datetime,
+plazas smallint not null,
+primary key(id),
+constraint fk_id_entidad_cuenta foreign key (id_entidad) references entidad(id),
+constraint fk_id_establecimiento_cuenta foreign key (id_establecimiento) references establecimiento(id),
+constraint fk_id_reserva_cuenta foreign key (id_reserva) references reserva(id)
+);
+
+-- many_to_many varias lineas de detalle varios articulos
+create table cuentaDetalle(
+id_cuenta int unsigned,
+linea smallint unsigned,
+instante datetime not null,
+id_articulo int unsigned not null,
+cantidad smallint not null,
+precio decimal(10,2),
+primary key(id_cuenta,linea),
+constraint fk_id_cuenta_cuentaDetalle foreign key (id_cuenta) references cuenta(id),
+constraint fk_id_articulo_cuentaDetalle foreign key (id_articulo) references articulo(id)
+);
+
+-- many_to_many varias mesas varias mesas
+create table cuenta_mesa(
+id_cuenta int unsigned auto_increment,
+id_mesa int unsigned,
+primary key(id_cuenta,id_mesa),
+constraint fk_id_cuenta_cuenta_mesa foreign key (id_cuenta) references cuenta(id),
+constraint fk_id_mesa_cuenta_mesa foreign key (id_mesa) references mesa(id)
+);
+
+-- tabla original
+insert into mesaEstado (nombre) values
+('libre'),
+('reservada'),
+('ocupada'),
+('deshabilitada');
+
+delimiter //
+
+create trigger creaCuentaPorReserva
+after insert on reserva
+FOR EACH row
+begin
+	insert into cuenta (id_entidad, id_establecimiento,id_reserva,plazas) values (new.id_entidad, new.id_establecimiento,new.id,new.plazas);
+end //
+-- fin trigger
+
+create trigger cierraCuentaPorReservaCancelada
+after update on reserva
+FOR EACH row
+begin
+	if new.id_estado =2 then 
+		update cuenta 
+		set fechasalida=now() 
+		where id_reserva=new.id;
+	end if;
+end //
+-- fin trigger
+
+create trigger ocupaMesaPorCuentaIniciada
+after update on cuenta
+FOR EACH row
+begin
+	if old.fechaentrada is null and new.fechaentrada>0 then 
+		update mesa set id_estado =3 where id in(select id_mesa from cuenta_mesa where id_cuenta=new.id);
+	end if;
+end //
+-- fin trigger
+
+create trigger consumeReservaPorCuentaCerrada
+after update on cuenta
+FOR EACH row
+begin
+	if old.fechasalida is null and new.fechasalida>0 then 
+		-- consumo la reserva
+		update reserva 
+		set id_estado=3 
+		where id=new.id_reserva;
+		-- libero las mesas
+		update mesa set id_estado =1 where id in(select id_mesa from cuenta_mesa where id_cuenta=new.id);
+	end if;
+end //
+-- fin trigger
+
+create function precioArticulo(id_articulo int) returns decimal(10,2)
+READS SQL DATA
+begin
+	declare precioA decimal(10,2);
+	select precioVP into precioA from articulo where id=id_articulo;
+	return precioA;
+end //
+-- fin function
+
+--  CREATE function reservaMesaReservasPendientes ()
+-- BEGIN
+-- 	update mesa 
+-- 	set id_estado=2	;
+-- end //
+-- fin function
+ 
+create function totalCuenta(id_cuentaDetalle int) returns decimal(10,2)
+READS SQL DATA
+begin
+	declare total decimal(10,2);
+	select sum(cantidad * precio) into total from cuentadetalle where id_cuenta=id_cuentaDetalle;
+	return total;
+end //
+-- fin function
+
+create function NumeroAleatorio (semilla smallint) returns float
+DETERMINISTIC 
+begin
+	return rand( semilla*rand());
+end //
+-- fin function
+
+delimiter ;
+
+
+-- INSERCION DE DATOS
+START TRANSACTION;
+
+insert into entidad (nombre,cif, administrador) values ('El Churrete','G-123456789', 'Manuel Del Pino');
+
+insert into establecimiento (id_entidad,alias,direccion,telefono,email) values
+(1,'casco_1','C/La Toja, 57 Zaragoza', '55-234-23-23','el_churrete.casco1@gmail.com'),
+(1,'marítitma_1','Pº/Del Mar, 157 Zaragoza', '55-234-66-58','el_churrete.marítitma1@gmail.com');
+
+update entidad set id_establecimiento=1;
+
+insert into categoriaProducto (nombre) values
+('inmaterial'),
+('alimentación'),
+('refresco'),
+('bodega'),
+('instalación'),
+('maquinaria'),
+('mobiliario'),
+('decoración'),
+('suministro gas'),
+('suministro eléctrico'),
+('suministro agua');
+
+insert into subCategoriaProducto (nombre) values
+('hortaliza'),
+('verdura'),
+('fruta'),
+('cereal'),
+('especia'),
+('fruto seco'),
+('carne'),
+('pescado'),
+('lácteo'),
+('huevos'),
+('aceite'),
+('vinagre'),
+('mineral'),
+('embutido'),
+('legumbre'),
+('harina'),
+('curtido'),
+('pasta'),
+('pan'),
+('refresco'),
+('cerveza'),
+('vino'),
+('espumoso'),
+('licor'),
+('infusión'),
+('cafe'),
+('snack'),
+('flor'),
+('planta'),
+('caldo'),
+('chocolate'),
+('hierbas'),
+('carta'),
+('menu ordinario'),
+('menu festivo');
+
+insert into unidadDeMedida (nombre) values
+('kg'),
+('gr'),
+('lt'),
+('ud'),
+('ml');
+
+insert into producto (id_categoriaProducto,id_subCategoriaProducto,id_unidadDeMedida, nombre,descripcion) values 
+(2,9,1,'mantequilla','sin sal'),
+(2,9,1,'mantequilla','con sal'),
+(2,9,3,'leche','natural de vaca'),
+(2,9,3,'leche','desnatada de vaca'),
+(2,9,3,'leche','natural de cabra'),
+(2,9,3,'leche','desnatada de cabra'),
+(2,9,1,'queso','seco de vaca'),
+(2,9,1,'queso','seco de cabra'),
+(2,9,1,'queso','fresco de cabra'),
+(2,9,1,'queso','seco de cabra'),
+(2,9,1,'requesón','fresco de oveja'),
+(2,9,1,'queso','gruyere'),
+(2,10,4,'huevo','gallina'),
+(2,10,4,'huevo','codorniz'),
+(2,11,3,'aceite de oliva','virgen extra'),
+(2,11,3,'aceite de girasol','extra'),
+(2,12,3,'vinagre','vino'),
+(2,13,1,'sal','marina para horno'),
+(2,13,1,'sal','refinada'),
+(2,1,1,'patata','blanca para hervir'),
+(2,1,1,'patata','roja para freir'),
+(2,1,1,'cebolla','seca'),
+(2,1,1,'cebolla','tierna'),
+(2,1,1,'cebolla','roja seca'),
+(2,1,1,'ajo','tierno'),
+(2,1,1,'ajo','seco'),
+(2,2,1,'espárrago','verde conserva'),
+(2,2,1,'espárrago','blanco conserva'),
+(2,2,1,'espárrago','verde fresco'),
+(2,2,1,'espárrago','blanco fresco'),
+(2,2,1,'tomate','rojo fresco'),
+(2,2,1,'tomate','entero conserva'),
+(2,2,1,'tomate','verde fresco'),
+(2,2,1,'tomate','truturado conserva'),
+(2,2,1,'alcachofa','fresca'),
+(2,2,1,'alcachofa','conserva'),
+(2,2,1,'pimiento','verde fresco'),
+(2,2,1,'pimiento','verde fresco'),
+(2,2,1,'pimiento','rojo conserva'),
+(2,2,1,'berengena','fresca'),
+(2,2,1,'calabacín','fresco'),
+(2,7,1,'pollo','blanco fresco entero'),
+(2,7,1,'pollo','azul fresco entero'),
+(2,7,1,'cordero','fresco'),
+(2,7,1,'cordero','costilla fresco'),
+(2,7,1,'ternera','costilla fresca'),
+(2,7,1,'bistec','ternera fresca'),
+(2,7,1,'espalda','cordero fresco'),
+(2,7,1,'ternera','fresca'),
+(2,2,1,'pepino','fresco'),
+(2,5,1,'orégano','fresco'),
+(2,17,1,'oliva','negra sevillana'),
+(2,17,1,'oliva','verde sevillana'),
+(2,17,1,'oliva','negra aragón'),
+(2,9,1,'queso','feta'),
+(2,19,1,'pan','barra'),
+(2,19,1,'pan','redondo'),
+(2,18,1,'couscous','redondo'),
+(2,32,1,'perejil','fresco'),
+(2,32,1,'menta','fresca'),
+(2,2,1,'limón','fresco'),
+(2,2,1,'limón','zumo'),
+(2,2,1,'naranja','zumo'),
+(2,9,3,'queso','mozzarella'),
+(2,32,1,'albahaca','fresca'),
+(2,5,1,'pimienta','negra'),
+(2,15,1,'garbanzo','crudo'),
+(2,2,1,'tomate','cherry fresco'),
+(2,15,1,'garbanzo','cocido'),
+(2,5,1,'tahini','pasta'),
+(2,5,1,'pimentón','dulce'),
+(2,15,1,'lenteja','crudo'),
+(2,15,1,'lenteja','cocida'),
+(2,2,1,'pimiento','rojo fresco'),
+(2,32,1,'filantro','fresco'),
+(2,2,1,'espinaca','fresca'),
+(2,6,1,'nuez','país'),
+(2,3,1,'fresa','país'),
+(2,30,3,'caldo','verdura'),
+(2,30,3,'caldo','pollo'),
+(2,30,3,'caldo','pollo y verdura'),
+(2,9,3,'nata','crema'),
+(2,14,1,'jamón','serrano'),
+(2,2,4,'lechuga','romana'),
+(2,19,1,'pan','crustones'),
+(2,1,1,'zanahoria','fresca'),
+(2,2,1,'apio','fresco'),
+(2,2,1,'judías','verde fresca'),
+(2,31,1,'chocolate','negro'),
+(2,31,1,'chocolate','con leche'),
+(2,13,4,'agua','natural'),
+(2,7,4,'pollo','blanco fresco muslo'),
+(2,32,1,'tomillo','fresco'),
+(2,32,1,'romero','fresco'),
+(2,8,1,'merluza','filete'),
+(2,7,4,'pierna','cordero fresco'),
+(2,5,4,'comino','fresco'),
+(2,8,1,'calamar','fresco'),
+(2,16,1,'harina','trigo'),
+(2,20,4,'cola','normal'),
+(2,21,4,'cerveza','cebada'),
+(2,33,4,'plato elaborado','carta'),
+(2,34,4,'plato elaborado','menu ordinario'),
+(2,35,4,'plato elaborado','menu especial')
+;
+
+insert into platoOrden (valor) values
+('primero'),
+('segundo'),
+('suplemento'),
+('transitorio'),
+('postre');
+
+insert into plato (id_platoorden,nombre) values
+-- primeros
+(1,'Ensalada Griega'),
+(1,'Gazpacho Andaluz'),
+(1,'Tabulé'),
+(1,'Ensalada Caprese'),
+(1,'Ensalada de Garbanzos'),
+(1,'Hummus'),
+(1,'Ensalada de Lentejas'),
+(1,'Pisto Manchego'),
+(1,'Escalivada'),
+(1,'Ensalada de Espinacas y Fresas'),
+(1,'Crema de Calabacín'),
+(1,'Salmorejo'),
+(1,'Fattoush'),
+(1,'Minestrone'),
+-- segundos
+(2,'Muslo pollo al Horno con Limón y Hierbas'),
+(2,'Pescado a la Plancha con Verduras'),
+(2,'Cordero Asado con Especias'),
+(2,'Calamares a la Parrilla'),
+
+
+-- postres
+(5,'Churro Clásico'),
+(5,'Churro Bañado en Chocolte'),
+(5,'Porra Especial');
+
+insert into ingredientePlato (id_plato,id_producto,id_unidadDeMedida,cantidad,orden) values
+(1,31,2,50,1),
+(1,50,2,50,2),
+(1,24,2,30,3),
+(1,38,2,25,4),
+(1,54,2,30,5),
+(1,55,2,60,6),
+(1,15,5,15,7),
+(1,51,2,0.25,8),
+(1,19,2,0.20,9),
+
+(2,31,2,250,1),
+(2,50,2,100,2),
+(2,38,2,50,3),
+(2,22,2,50,4),
+(2,26,2,10,5),
+(2,56,2,30,6),
+(2,15,5,25,7),
+(2,17,5,10,8),
+(2,19,2,0.20,9),
+
+(3,58,2,50,1),
+(3,31,2,50,2),
+(3,50,2,50,3),
+(3,22,2,50,4),
+(3,59,2,50,5),
+(3,60,2,25,6),
+(3,62,5,25,7),
+(3,15,5,15,8),
+(3,19,2,0.20,9),
+
+(4,31,2,50,1),
+(4,64,2,60,2),
+(4,65,2,25,3),
+(4,15,5,15,4),
+(4,19,2,0.20,5),
+(4,66,2,0.25,6),
+
+(5,69,2,100,1),
+(5,68,2,200,2),
+(5,50,2,50,3),
+(5,24,2,50,4),
+(5,59,2,20,5),
+(5,15,5,15,6),
+(5,62,5,25,7),
+(5,19,2,0.20,8),
+(5,66,2,0.25,9),
+
+(6,69,2,100,1),
+(6,70,2,0.5,2),
+(6,62,5,25,3),
+(6,25,2,0.25,4),
+(6,15,5,15,5),
+(6,19,2,0.20,8),
+(6,71,2,0.25,9),
+
+(7,73,2,50,1),
+(7,74,2,50,2),
+(7,50,2,50,3),
+(7,24,2,50,4),
+(7,75,2,50,5),
+(7,62,5,25,6),
+(7,15,5,15,7),
+(7,19,2,0.20,8),
+(7,66,2,0.25,9),
+
+(8,40,2,150,1),
+(8,41,2,250,2),
+(8,74,2,50,3),
+(8,38,2,50,4),
+(8,22,2,50,5),
+(8,31,2,50,6),
+(8,15,5,25,7),
+(8,19,2,0.20,8),
+(8,66,2,0.25,9),
+
+(9,40,2,150,1),
+(9,74,2,100,2),
+(9,22,2,100,3),
+(9,31,2,200,4),
+(9,15,5,15,5),
+(9,19,2,0.20,6),
+
+(10,76,2,200,1),
+(10,78,2,200,2),
+(10,77,2,50,3),
+(10,9,2,100,4),
+(10,15,5,15,5),
+(10,62,5,25,6),
+(10,19,2,0.20,7),
+(10,41,2,0.25,8),
+
+(11,41,2,150,1),
+(11,20,2,100,2),
+(11,22,2,50,3),
+(11,79,5,125,4),
+(11,82,5,25,5),
+(11,15,5,15,6),
+(11,19,2,0.20,8),
+(11,66,2,0.25,9),
+
+(12,31,2,1000,1),
+(12,56,2,200,2),
+(12,26,2,20,3),
+(12,15,5,25,4),
+(12,13,4,1,5),
+(12,83,2,50,6),
+(12,19,2,0.20,7),
+
+(13,84,2,50,1),
+(13,31,2,100,2),
+(13,50,2,50,3),
+(13,24,2,50,4),
+(13,85,2,50,5),
+(13,59,2,25,6),
+(13,60,2,25,7),
+(13,15,5,20,8),
+(13,62,5,25,9),
+(13,19,2,0.20,10),
+(13,66,2,0.25,11),
+
+(14,22,2,50,1),
+(14,85,2,50,2),
+(14,87,2,50,3),
+(14,20,2,50,4),
+(14,41,2,50,5),
+(14,88,2,50,6),
+(14,79,5,250,7),
+(14,15,5,20,8),
+(14,19,2,0.20,10),
+(14,66,2,0.25,11),
+(14,65,2,0.25,12),
+
+(15,92,4,1,1),
+(15,61,4,1,2),
+(15,26,2,40,3),
+(15,93,2,30,4),
+(15,94,2,30,5),
+(15,15,5,30,8),
+(15,66,2,0.25,11),
+(15,65,2,0.25,12),
+
+(16,95,2,150,1),
+(16,74,2,50,2),
+(16,38,2,50,3),
+(16,41,2,50,4),
+(16,15,5,30,6),
+(16,61,4,1,7),
+(16,66,2,0.25,8),
+(16,65,2,0.25,9),
+
+(17,96,4,1,1),
+(17,26,2,40,2),
+(17,97,2,25,3),
+(17,71,2,30,4),
+(17,15,5,15,5),
+(17,66,2,0.25,8),
+(17,65,2,0.25,9),
+
+(18,98,2,200,1),
+(18,26,2,25,2),
+(18,59,2,20,3),
+(18,61,4,1,4),
+(18,15,5,15,5),
+(18,66,2,0.25,8),
+(18,65,2,0.25,9),
+
+-- churros
+(19,99,2,200,1),
+(20,99,2,200,1),
+(21,99,2,200,1);
+
+insert into carta (id_entidad,nombre,fecha,inicio) values
+(1,'temporada-2024',current_date,current_date);
+
+insert into carta_plato (id_carta,id_plato) values
+(1,1),
+(1,2),
+(1,3),
+(1,4),
+(1,15),
+(1,16),
+(1,17),
+(1,18),
+(1,19),
+(1,20),
+(1,21);
+
+insert into proveedor (nombre, cif,direccion,telefono,email) values
+('Distribuhostel', 'B123456789','C/Las Cortes, 125 Zaragoza','55-345-45-56','distrihostel@gmail.com'),
+('Aceites Oro', 'B234567891','C/Transversal, 34 Zaragoza','55-355-33-89','aceites_oro@gmail.com'),
+('Huerta Unidos', 'B456789123','Pº/Del consejo, 78 Zaragoza','55-345-09-11','huerta_unidos@gmail.com'),
+('Cocina casco_1', '',null,null,'el_churrete.casco1@gmail.com'),
+('Cocina marítima_1', '',null ,null,'el_churrete.marítitma1@gmail.com');
+
+insert into producto_proveedor (id_producto,id_proveedor) values
+(1,1),
+(2,1),
+(3,1),
+(4,1),
+(5,1),
+(6,1),
+(7,1),
+(8,1),
+(9,1),
+(10,1),
+(11,1),
+(12,1),
+(13,1),
+(14,1),
+(15,1),
+(16,1),
+(17,1),
+(18,1),
+(19,1),
+(20,1),
+(21,1),
+(22,1),
+(23,1),
+(24,1),
+(25,1),
+(26,1),
+(27,1),
+(28,1),
+(29,1),
+(30,1),
+(31,1),
+(32,1),
+(33,1),
+(34,1),
+(35,1),
+(36,1),
+(37,1),
+(38,1),
+(39,1),
+(40,1),
+(41,1),
+(42,1),
+(43,1),
+(44,1),
+(45,1),
+(46,1),
+(47,1),
+(48,1),
+(49,1),
+(50,1),
+(51,1),
+(52,1),
+(53,1),
+(54,1),
+(55,1),
+(56,1),
+(57,1),
+(58,1),
+(59,1),
+(60,1),
+(61,1),
+(62,1),
+(63,1),
+(64,1),
+(65,1),
+(66,1),
+(67,1),
+(68,1),
+(69,1),
+(70,1),
+(71,1),
+(72,1),
+(73,1),
+(74,1),
+(75,1),
+(76,1),
+(77,1),
+(78,1),
+(79,1),
+(80,1),
+(81,1),
+(82,1),
+(83,1),
+(84,1),
+(85,1),
+(86,1),
+(87,1),
+(88,1),
+(89,1),
+(90,1),
+(91,1),
+(92,1),
+(93,1),
+(94,1),
+(95,1),
+(96,1),
+(97,1),
+(98,1),
+(99,1),
+(100,1),
+(101,1),
+(102,4),
+(103,4),
+(104,4);
+
+insert into tipoenvase (nombre) values
+('saco'),
+('caja'),
+('bolsa'),
+('unitario');
+
+insert into articulo (id_producto, id_proveedor,id_tipoenvase,nombre,envaseUds,precioud) values
+(1,1,2,'Asturiana',4,4.56),
+(2,1,2,'Asturiana',4,4.56),
+(15,1,2,'OroSol',10,8.45),
+(20,1,1,'Cornejo',50,1.12),
+(91,1,2,'FontVella',24,0.78),
+(100,1,2,'Pepsi-Cola',24,0.78),
+(101,1,2,'Estrella Galicia',24,0.78),
+(102,4,4,'Ensalada Griega',1,2.50),
+(102,4,4,'Gazpacho Andaluz',1,2.50),
+(102,4,4,'Tabulé',1,2.50),
+(102,4,4,'Ensalada Caprese',1,2.50),
+(102,4,4,'Muslo pollo al Horno con Limón y Hierbas',1,3.50),
+(102,4,4,'Pescado a la Plancha con Verduras',1,4.50),
+(102,4,4,'Cordero Asado con Especias',1,3.50),
+(102,4,4,'Calamares a la Parrilla',1,4.50),
+(102,4,4,'Churro Clásico',1,1.66),
+(102,4,4,'Churro Bañado en Chocolte',1,2.1),
+(102,4,4,'Porra Especial',1,2.22)
+;
+
+
+insert into almacen (id_entidad,id_establecimiento,nombre) values
+(1,1,'A'),
+(1,1,'B'),
+(1,1,'B.necera_1'),
+(1,1,'B.nevera_2'),
+(1,2,'A'),
+(1,2,'A.nevera_1'),
+(1,2,'A.nevera_2'),
+(1,2,'B'),
+(1,2,'C');
+
+insert into ubicacionEnAlmacen (id_almacen, estanteria, estante, posicion) values
+(1,1,1,1),
+(1,1,1,2),
+(1,1,1,3),
+(1,1,2,1),
+(1,1,2,2),
+(1,1,2,3),
+(1,2,1,1),
+(1,2,1,2),
+(1,2,1,3),
+(2,1,1,1),
+(2,1,1,2),
+(2,1,1,3),
+(2,1,2,1),
+(2,1,2,2),
+(2,1,2,3),
+(2,2,1,1),
+(2,2,1,2),
+(2,2,1,3);
+
+insert into pedidoproveedor (id_entidad,id_establecimiento,id_proveedor,fecha) values
+(1,1,1,now()),
+(1,1,1,now());
+
+insert into pedidoproveedor_detalle (id_pedido, linea, id_articulo,cantidad,precioUd) values
+(1,1,1,1,4.12),
+(1,2,3,2,8.64),
+(2,1,4,4,1.12);
+
+insert into albaranproveedor (id,id_entidad, id_establecimiento,id_proveedor,fecha) values
+(1,1,1,1,now()),
+(2,1,1,1,now());
+
+insert into albaranproveedor_detalle (id_albaran,linea,id_pedido, pedidoLinea ,id_articulo,cantidad,precioUd) values
+(1,1,1,1,1,1,4.12),
+(1,2,1,2,3,2,8.64),
+(2,1,1,1,4,4,1.12);
+
+insert into lotearticulo (id_albaran,albaranLinea,id_entidad, id_establecimiento,id_articulo, fecha) values
+(1,1,1,1,1,now()),
+(1,2,1,1,3,now()),
+(1,1,1,1,4,now());
+
+insert into loteUbicacion (id_lote,id_almacen,entrada,reservado,consumido) values
+(1,1,4,0,0),
+(2,5,20,0,0),
+(3,7,200,0,0);
+
+
+insert into planta (id_entidad,id_establecimiento,valor, nombre) values
+(1,1,0,'habitual'),
+(1,1,0,'imperial');
+
+insert into usoZona(nombre) values
+('cliente'),
+('servicio');
+
+insert into zona(id_planta,id_usoZona ,nombre,areaMetros) values
+(1,1,'comedor central',150),
+(1,1,'comedor apartado',40),
+(1,1,'comedor pasillo',40),
+(1,1,'barra',25),
+(1,1,'terraza exterior',70),
+(1,1,'terraza interior',50),
+(1,2,'almacén',150),
+(1,1,'servicios',20),
+(1,2,'cocina',50),
+(1,1,'recepción',20);
+
+
+
+insert into mesa(id_zona,nombre,plazas,id_estado) values
+(1,'1',4,1),
+(1,'2',4,1),
+(1,'3',4,1),
+(1,'4',4,1),
+(1,'5',2,1),
+(2,'1',2,1),
+(2,'2',2,1),
+(2,'3',2,1),
+(2,'4',2,1),
+(3,'1',4,1),
+(3,'2',2,1);
+
+insert into temporada (nombre,diaInicio,mesInicio,diaFin,mesFin) values
+('verano',21,6,20,9),
+('otoño',21,9,20,12),
+('invierno',21,12,20,3),
+('primavera',21,3,20,6),
+('anual',1,1,31,12);
+
+insert into turno(id_temporada,festivo,orden,Inicio,Fin) values
+(1,false,1,'06:00','14:00'),
+(1,false,2,'12:00','20:00'),
+(1,false,3,'18:00','02:00'),
+
+(2,false,1,'06:00','14:00'),
+(2,false,2,'12:00','20:00'),
+(2,false,3,'18:00','02:00'),
+
+(3,false,1,'06:00','14:00'),
+(3,false,2,'12:00','20:00'),
+(3,false,3,'18:00','02:00'),
+
+(4,false,1,'06:00','14:00'),
+(4,false,2,'12:00','20:00'),
+(4,false,3,'18:00','02:00'),
+
+(5,false,1,'06:00','14:00'),
+(5,false,2,'12:00','20:00'),
+(5,false,3,'18:00','02:00');
+
+insert into cargo (nombre,orden) values
+('chef',1),
+('metre',2),
+('recepcionista',3),
+('cocinero 1º',4),
+('cocinero 2º',5),
+('cocinero ayudante',7),
+('camarero',6),
+('ayudante camarero',8);
+
+insert into personal(nombre,telefono) values
+('juan pérez','55-234-56-78'),
+('enrique moresno','55-234-78-34'),
+('juan pera','55-234-55-34'),
+('luis garcía','55-234-56-78'),
+('maría gonzález','55-234-56-78'),
+('manuel lópez','55-234-56-78'),
+('sandra jimeno','55-234-56-78'),
+('andrés la fuente','55-234-56-78'),
+('leandro del monte','55-234-56-78');
+
+insert into cargo_personal (id_cargo,id_personal) values
+(1,1),
+(2,2),
+(3,3),
+(4,4),
+(5,5),
+(6,6),
+(7,7),
+(8,8),
+(7,9);
+
+insert into jornadaturno (fecha,id_turno) values
+(DATE_ADD(current_date, INTERVAL 1 DAY),13),
+(DATE_ADD(current_date, INTERVAL 1 DAY),14),
+(DATE_ADD(current_date, INTERVAL 1 DAY),15),
+
+(DATE_ADD(current_date, INTERVAL 2 DAY),13),
+(DATE_ADD(current_date, INTERVAL 2 DAY),14),
+(DATE_ADD(current_date, INTERVAL 2 DAY),15),
+
+(DATE_ADD(current_date, INTERVAL 3 DAY),13),
+(DATE_ADD(current_date, INTERVAL 3 DAY),14),
+(DATE_ADD(current_date, INTERVAL 3 DAY),15),
+
+(DATE_ADD(current_date, INTERVAL 4 DAY),13),
+(DATE_ADD(current_date, INTERVAL 4 DAY),14),
+(DATE_ADD(current_date, INTERVAL 4 DAY),15),
+
+(DATE_ADD(current_date, INTERVAL 5 DAY),13),
+(DATE_ADD(current_date, INTERVAL 5 DAY),14),
+(DATE_ADD(current_date, INTERVAL 5 DAY),15),
+
+(DATE_ADD(current_date, INTERVAL 6 DAY),13),
+(DATE_ADD(current_date, INTERVAL 6 DAY),14),
+(DATE_ADD(current_date, INTERVAL 6 DAY),15),
+
+(DATE_ADD(current_date, INTERVAL 7 DAY),13),
+(DATE_ADD(current_date, INTERVAL 7 DAY),14),
+(DATE_ADD(current_date, INTERVAL 7 DAY),15);
+
+insert into jornadaturno_personal (fecha,id_establecimiento,id_turno,id_personal,id_zona) values
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,1,9),
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,2,1),
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,3,10),
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,6,9),
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,7,1),
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,8,1),
+(DATE_ADD(current_date, INTERVAL 1 DAY),1,13,9,4);
+
+insert into reservaestado (nombre) values
+('activa'),
+('cancelada'),
+('consumida');
+
+commit;
+rollback;
+-- PRUEBAS
+
+-- catalogo global de producto
+select c.nombre as categoria, s.nombre  as subCategoria ,p.nombre , p.descripcion 
+from producto p 
+join categoriaproducto c on c.id =p.id_categoriaProducto 
+join subcategoriaproducto s on s.id =p.id_subCategoriaProducto 
+;
+
+-- carta global
+select c.nombre as carta, c.fecha , c.inicio ,p2.valor as orden,p.nombre as plato
+from carta c 
+join carta_plato cp on cp.id_carta =c.id 
+join plato p on p.id =cp.id_plato 
+join platoorden p2 on p2.id =p.id_platoOrden 
+;
+
+-- catalogo global de articulo
+select p.nombre as producto, p.descripcion, a.nombre as articulo, p2.nombre as proveedor,a.precioUd as precioCoste
+from articulo a 
+join producto p on p.id =a.id_producto 
+join proveedor p2 on p2.id =a.id_proveedor 
+where p.id_categoriaProducto in (2)
+;
+
+-- pedido compra del establecimiento
+select  pd.id_pedido  as pedido,pd.linea ,e.alias as establecimiento ,p2.nombre as proveedor ,pedidoCompra.fecha  ,p3.nombre as producto , p3.descripcion
+,a.nombre as articulo,  pd.cantidad, t.nombre as envase ,a.envaseUds as udsPorEnvase
+,(pd.cantidad * a.envaseUds)as unidades,u.nombre  as udDeMedida,pd.precioUd ,((pd.cantidad * a.envaseUds) * pd.precioUd) as total 
+from pedidoproveedor as pedidoCompra 
+join pedidoproveedor_detalle pd on pd.id_pedido =pedidoCompra.id
+join establecimiento e on e.id =pedidoCompra.id_establecimiento 
+join proveedor p2 on p2.id =pedidoCompra.id_proveedor 
+join articulo a on a.id =pd.id_articulo 
+join producto p3 on p3.id =a.id_producto
+join tipoenvase t  on t.id =a.id_tipoEnvase 
+join unidaddemedida u on u.id =p3.id_unidadDeMedida 
+where pedidocompra.id_entidad =1 and pedidocompra.id_establecimiento =1
+;
+
+-- albaran compra del establecimiento
+select e.alias as establecimiento, albaranCompra.id as albaran , ad.linea, ad.id_pedido as pedido, ad.pedidoLinea,p2.nombre as proveedor
+, p.nombre as producto, p.descripcion, a2.nombre as articulo, ad.cantidad, t.nombre as envase, a2.envaseUds as udsPorEnvase
+, (ad.cantidad * a2.envaseUds)as unidades,u.nombre as udDeMedida, ((ad.cantidad * a2.envaseUds)*ad.precioUd) as total 
+from albaranproveedor albaranCompra  
+join albaranproveedor_detalle ad on ad.id_albaran =albaranCompra.id 
+join establecimiento e on e.id =albaranCompra.id_establecimiento 
+join articulo a2 on a2.id=ad.id_articulo 
+join producto p on p.id =a2.id_producto 
+join tipoenvase t on t.id =a2.id_tipoEnvase 
+join unidaddemedida u on u.id =p.id_unidadDeMedida 
+join proveedor p2 on p2.id= albaranCompra.id_proveedor 
+where albaranCompra.id_entidad =1 and albaranCompra.id_establecimiento =1
+;
+
+-- existencias y ubicacion en alimentacion del establecimiento
+select  t.nombre as categoríaProducto, g.nombre as subCategoríaProducto,   a.id as id_articulo ,p.id as id_producto , p.nombre  as producto ,p.descripcion, a.nombre  as articulo,p2.nombre as proveedor
+,(l.entrada -l.reservado -l.consumido) as disponible,u2.nombre as udDeMedida ,l.entrada ,l.reservado ,l.consumido 
+, n.nombre as almacen, u3.estanteria , u3.estante ,u3.posicion 
+from loteubicacion l 
+join lotearticulo l2 on l2.id =l.id_lote 
+join articulo a on a.id =l2.id_articulo 
+join producto p on p.id =a.id_producto and p.id_categoriaProducto in(2)   -- alimentacion
+join categoriaproducto t on t.id =p.id_categoriaProducto 
+join subCategoriaproducto g on g.id =p.id_subCategoriaProducto 
+join proveedor p2 on p2.id =a.id_proveedor
+join unidaddemedida u2 ON u2.id =p.id_unidadDeMedida 
+join ubicacionEnAlmacen u3  on u3.id =l.id_almacen 
+join almacen n on n.id =u3.id_Almacen 
+where (l2.id_entidad=1 and l2.id_establecimiento=1) and  (l.entrada -l.reservado -l.consumido)>0 
+;
+
+-- catalogo global de plato
+select  p2.valor ,   p.nombre 
+from plato p
+join platoorden p2 on p2.id  =p.id_platoOrden 
+order by p2.id 
+;
+
+-- catalogo global de plato e ingredientes
+select p3.valor as ordenplato ,  p.nombre,p2.nombre as producto , p2.descripcion ,i.cantidad , u.nombre  as udDeMedida
+from plato p 
+join platoorden p3 on p3.id =p.id_platoOrden 
+join ingredienteplato i on i.id_plato =p.id 
+join producto p2 on p2.id =i.id_producto 
+join unidaddemedida u on u.id =i.id_unidadDeMedida 
+order by i.id_plato, i.orden
+;
+
+-- total plazas por zona de planta del establecimiento
+select p.nombre as planta, z.nombre as zona , sum(m.plazas) as total_plazas_por_zona
+from planta p 
+join zona z on z.id_planta =p.id 
+join mesa m on m.id_zona =z.id 
+where p.id_entidad =1 and p.id_establecimiento =1
+group by z.id 
+;
+
+-- total plazas establecimiento
+select  sum(m.plazas) as total_plazas_establecimiento
+from planta p 
+join zona z on z.id_planta =p.id 
+join mesa m on m.id_zona =z.id 
+where p.id_entidad =1 and p.id_establecimiento =1
+;
+
+-- estado y número de plazas de mesa por zona y planta
+select p.valor as planta, p.nombre,z.nombre  as zona,m.nombre as num_mesa, m.plazas , m2.nombre as estado
+from zona z 
+join planta p on p.id =z.id_planta 
+join mesa m on m.id_zona =z.id 
+join mesaestado m2 on m2.id =m.id_estado 
+;
+
+-- personal por cargo
+select c.nombre as cargo,p.nombre as persona
+from cargo_personal cp 
+join cargo c on c.id =cp.id_cargo 
+join personal p on p.id =cp.id_personal 
+order by c.orden 
+;
+
+-- turnos del personal por establecimiento y temporada 
+select e.alias as establecimiento, t2.nombre as temporada,j.fecha,t.orden as turno , p.nombre,  t.inicio ,t.fin ,t.festivo ,c.nombre as cargo,z.nombre as zona
+from jornadaturno_personal j
+join establecimiento e on e.id =j.id_establecimiento  
+join turno t on t.id =j.id_turno 
+join temporada t2 on t2.id =t.id_temporada 
+join personal p on p.id =j.id_personal 
+join cargo_personal cp on cp.id_personal =p.id 
+join cargo c on c.id =cp.id_cargo 
+join zona z on z.id =j.id_zona 
+where  e.id =1
+order by p.nombre  
+;
+
+-- metros de area cliente por zona y planta del establecimiento
+select p.valor as planta, z.nombre as zona , z.areaMetros as metros 
+from planta p 
+join zona z on z.id_planta =p.id 
+where p.id_entidad =1 and p.id_establecimiento =1 and z.id_usoZona =1 -- cliente
+;
+
+-- total metros area de cliente por establecomiento
+select sum(z.areaMetros)  as metrosTotal 
+from planta p 
+join zona z on z.id_planta =p.id 
+where p.id_entidad =1 and p.id_establecimiento =1 and z.id_usoZona =1 -- cliente
+;
+
+
+
+-- incremento precioVP segun el precioUd de coste del articulo 
+update articulo set precioVP = precioUd * 3;
+
+-- inserta 2 reservas 
+insert into reserva (id_entidad,id_establecimiento,fecha,fechaprevista,horaprevista,plazas,id_estado) values
+(1,1,now(),date_add(current_date(), interval 1 day),'14:00',10,1),
+(1,1,now(),date_add(current_date(), interval 0 day),'15:30', 4,1);
+
+-- asigna mesas a la cuenta 1 (habiendo comprobado que estaran libres)
+insert into cuenta_mesa (id_cuenta,id_mesa) values
+(1,1),
+(1,2),
+(1,3),
+(2,4);
+
+-- llegan los clientes de la reserva 1 cuenta 1
+update cuenta set fechaEntrada =now() where id=1;
+
+-- estado de las mesas
+select p.nombre as planta, z.nombre as zona, m.nombre as mesa ,m2.nombre  as estado
+from mesa m 
+join zona z on z.id =m.id_zona 
+join planta p on p.id =z.id_planta 
+join mesaestado m2 ON m2.id =m.id_estado 
+where p.id_entidad =1 and p.id_establecimiento =1
+;
+
+-- llamada a una funcion
+select numeroaleatorio(100) as aleatorio
+;
+
+-- prueba la funcion precio por id_articulo
+select precioarticulo(16)
+;
+
+-- inserta lineas de pedido en la cuenta 1 del comensal 
+insert into cuentaDetalle (id_cuenta,linea,instante,id_articulo,cantidad,precio) values
+(1,1,now(),5,1,precioArticulo(5)),
+(1,2,now(),6,5,precioArticulo(6)),
+(1,3,now(),7,4,precioArticulo(7)),
+(1,4,now(),8,3,precioArticulo(8)),
+(1,5,now(),9,4,precioArticulo(9)),
+(1,6,now(),10,4,precioArticulo(10)),
+(1,7,now(),12,6,precioArticulo(12)),
+(1,8,now(),13,5,precioArticulo(13)),
+(1,9,now(),16,11,precioArticulo(16))
+;
+-- totaliza la cuenta 1
+select totalcuenta(1)
+;
+
+-- busco la cuenta segun el id de mesa 1,2,3
+select m.nombre as mesa, cm.id_cuenta as cuenta
+from mesa m 
+join cuenta_mesa cm on cm.id_mesa =m.id 
+where m.id In(1,2,3)
+;
+-- busco la cuenta segun el id de mesa 4
+select m.nombre as mesa, cm.id_cuenta as cuenta
+from mesa m 
+join cuenta_mesa cm on cm.id_mesa =m.id 
+where m.id In(4)
+;
+
+-- cierra la cuenta 1 y libera las mesas ocupadas de la cuenta
+update cuenta set fechaSalida =now() where id=1
+;
+
+-- relacion del detalle de la cuenta  
+select cd.id_cuenta as cuenta , a.nombre as articulo ,cd.cantidad, cd.precio , (cd.precio*cd.cantidad) as totalLinea 
+from cuentaDetalle cd 
+join articulo a on a.id =cd.id_articulo 
+;
+
+
+select r.id as reserva , r.fecha , r.fechaPrevista , r.horaPrevista ,p.nombre as planta, z.nombre as zona,  m.nombre as mesa
+from reserva r 
+join cuenta c on c.id_reserva =r.id 
+join cuenta_mesa cm on cm.id_cuenta =c.id 
+join mesa m on m.id =cm.id_mesa 
+join zona z on z.id =m.id_zona 
+join planta p on p.id =z.id_planta 
+where r.id_estado=1
+order by r.id 
+;
+
+-- media de gasto por persona
+select (sum(c2.cantidad*c2.precio)/c.plazas) as mediaPersonaGAsto
+from cuenta c 
+join cuentadetalle c2 on c2.id_cuenta=c.id 
+where c.fechaSalida is not null
+group by c.id ;
+
