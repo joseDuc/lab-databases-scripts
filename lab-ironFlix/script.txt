@@ -1,0 +1,204 @@
+
+SET @local.bonusStd=15;
+
+drop schema if exists ironFlix;
+create schema if not exists ironFlix;
+use ironFlix;
+
+create table usuario(
+id int unsigned auto_increment,
+nombre nvarchar(100) not null,
+email nvarchar(100) not null unique,
+bono smallint,
+primary key(id)
+);
+
+create table genero(
+id tinyint unsigned auto_increment,
+nombre varchar(20) not null unique,
+primary key(id)
+);
+
+create table pelicula(
+id int unsigned auto_increment,
+titulo nvarchar(50) not null,
+minutosDuracion smallint unsigned not null,
+anioEstreno smallint not null,
+id_genero tinyint unsigned,
+primary key(id),
+constraint fk_id_genero_pelicula foreign key (id_genero) references genero(id)
+);
+
+create table visualizacion(
+id int unsigned auto_increment,
+id_pelicula int unsigned,
+id_usuario int unsigned,
+fecha datetime,
+primary key (id),
+constraint fk_id_pelicula_visualizacion foreign key (id_pelicula) references pelicula(id),
+constraint fk_id_usuario_visualizacion foreign key (id_usuario) references usuario(id)
+);
+
+delimiter //
+
+create procedure agregaCheckAlNombre()
+begin
+declare idUs int;
+declare nombreUs nvarchar(100);
+declare done boolean;
+declare cursor_usuario cursor for select id,nombre from usuario;
+declare continue handler for not found set done=true;
+
+open cursor_usuario;
+
+looping: loop
+	fetch cursor_usuario into idUs,nombreUs;
+	if done then
+		leave looping;
+	end if;
+	update usuario set nombre =concat(nombre,'_check') where id=idUs;
+	if (select count(id_usuario) from visualizacion where id_usuario=idUs)>1 then 
+		call agregaBono(idUs,@local.bonusStd);
+	end if;
+end loop;
+
+close cursor_usuario;
+end //
+
+create procedure agregaBono(idUsuario int, cantidadBono smallint)
+begin
+
+	declare bonoOld smallint;
+	set bonoOld=(select bono from usuario where id=idUsuario) + cantidadbono;
+	update usuario set bono=cantidadBono where id=idUsuario;
+end //
+
+delimiter ;
+
+
+INSERT INTO genero (nombre) VALUES
+('Acción'),
+('Comedia'),
+('Drama'),
+('Ciencia Ficción'),
+('Terror'),
+('Romance'),
+('Aventura'),
+('Fantasía'),
+('Thriller'),
+('Documental'),
+('Comedia/Drama');
+
+INSERT INTO pelicula (titulo, minutosDuracion, anioEstreno, id_genero) VALUES
+('Inception', 148, 2010, 4),
+('The Godfather', 175, 1972, 3),
+('The Dark Knight', 152, 2008, 1),
+('Forrest Gump', 142, 1994, 11),
+('The Shawshank Redemption', 142, 1994, 3);
+
+INSERT INTO usuario (nombre, email) VALUES
+('Juan Perez', 'juan.perez@example.com'),
+('Maria Lopez', 'maria.lopez@example.com'),
+('Carlos Sánchez', 'carlos.sanchez@example.com'),
+('Ana Martinez', 'ana.martinez@example.com'),
+('Luis Gomez', 'luis.gomez@example.com'),
+('Laura Fernandez', 'laura.fernandez@example.com'),
+('Pedro Torres', 'pedro.torres@example.com'),
+('Elena Ramirez', 'elena.ramirez@example.com'),
+('Miguel Diaz', 'miguel.diaz@example.com'),
+('Sofia Morales', 'sofia.morales@example.com');
+
+INSERT INTO visualizacion (id_pelicula, id_usuario) VALUES
+(1, 1),
+(1, 2),
+(1, 3),
+(1, 4),
+(1, 5),
+(2, 6),
+(2, 7),
+(2, 8),
+(2, 9),
+(2, 10),
+(3, 1),
+(3, 2),
+(3, 3),
+(3, 4),
+(3, 5),
+(4, 6),
+(4, 7),
+(4, 8),
+(4, 9),
+(4, 10),
+(5, 1),
+(5, 2),
+(5, 3),
+(5, 4),
+(3, 2),
+(3, 3),
+(3, 4),
+(3, 5),
+(4, 6),
+(4, 7),
+(4, 8),
+(4, 9),
+(4, 10),
+(5, 1),
+(5, 2),
+(5, 3),
+(5, 4),
+(2, 6),
+(2, 7),
+(2, 8),
+(2, 9),
+(2, 10),
+(3, 1),
+(3, 2),
+(3, 3),
+(3, 4),
+(5, 5);
+
+
+call agregaCheckAlNombre()
+;
+
+-- visualizaciones por titulo
+select titulo , count(*) 
+from visualizacion v
+join pelicula p on p.id=v.id_pelicula
+group by titulo
+;
+
+-- visualizaciones por usuario
+select u.nombre as usuario , p.titulo
+from usuario u
+join visualizacion v on v.id_usuario=u.id 
+join pelicula p on p.id=v.id_pelicula
+order by u.id, p.id
+;
+
+-- cantidad de peliculas vistas por el usuario
+select u.nombre as usuario  , count(v.id_pelicula)
+from visualizacion v
+join usuario u on u.id=v.id_usuario
+join pelicula p on p.id=v.id_pelicula
+where p.id=5
+group by u.nombre
+;
+
+-- cantidad de veces vista una pelicula concreto por el usuario
+select u.nombre as usuario , p.titulo , count(v.id_pelicula)
+from visualizacion v
+join usuario u on u.id=v.id_usuario
+join pelicula p on p.id=v.id_pelicula
+where p.id=5 -- The Shawshank Redemption
+group by u.nombre
+;
+
+-- cantidad de visualizaciones por genero
+select g.id, g.nombre as genero , count(p.id_genero)
+from visualizacion v
+join pelicula p on p.id=v.id_pelicula
+join genero g on g.id=p.id_genero 
+where g.id=4 -- ciencia ficción
+group by g.id 
+;

@@ -1,5 +1,4 @@
 
-
 drop schema if exists el_churrete;
 create schema if not exists el_churrete;
 
@@ -7,7 +6,6 @@ use el_churrete;
 -- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 -- como se quedó en última instancia, no es necesario hacer todas las relaciones bidireccioneales
 -- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 -- one_to_many una entidad , varios establecimientos por entidad
 create table entidad(
 id tinyInt unsigned auto_increment,
@@ -471,16 +469,30 @@ begin
 end //
 -- fin trigger
 
-create trigger cierraCuentaPorReservaCancelada
-after update on reserva
-FOR EACH row
+create procedure liberaMesaCuentaCerrada(idCuenta int)
 begin
-	if new.id_estado =2 then 
-		update cuenta 
-		set fechasalida=now() 
-		where id_reserva=new.id;
+	update mesa set id_estado =1 where id in(select id_mesa from cuenta_mesa where id_cuenta=idCuenta);
+end //
+-- fin procedure
+
+create procedure liberaMesaReservaCancelada(idReserva int)
+begin
+	declare idCta int;
+	set idCta=(select id from cuenta where id_reserva=idReserva);
+	if idCta>0 then
+		update mesa set id_estado =1 where id_estado=2 and id in(select id_mesa from cuenta_mesa where id_cuenta=idCta);
 	end if;
 end //
+-- fin procedure
+
+create trigger reservaCancelada
+ after update on reserva
+ FOR EACH row
+ begin
+ 	if new.id_estado =2 then 
+ 		call liberaMesaReservaCancelada(new.id);
+	end if;
+ end //
 -- fin trigger
 
 create trigger ocupaMesaPorCuentaIniciada
@@ -501,9 +513,10 @@ begin
 		-- consumo la reserva
 		update reserva 
 		set id_estado=3 
-		where id=new.id_reserva;
+		where id=new.id_reserva and id_estado=1; -- solo activa
 		-- libero las mesas
-		update mesa set id_estado =1 where id in(select id_mesa from cuenta_mesa where id_cuenta=new.id);
+		call liberaMesaCuentaCerrada(new.id);
+		-- update mesa set id_estado =1 where id in(select id_mesa from cuenta_mesa where id_cuenta=new.id);
 	end if;
 end //
 -- fin trigger
@@ -517,19 +530,16 @@ begin
 end //
 -- fin function
 
- CREATE function reservaMesaReservasPendientes () returns int
- deterministic
+CREATE procedure reservaMesaReservasProximas () 
  begin
-	declare v int;
  	update mesa set id_estado =2
 	where id_estado=1 and id in (select id_mesa from cuenta_mesa 
 	where id_cuenta in(select id from cuenta 
 	where id in (select id from reserva where id_Estado=1 and date(fechaprevista )=current_date 
 	and horaprevista>= date_add(current_time(),interval -120 minute)
 	)));
- 	return v;
  end //
--- fin function
+-- fin procedure
  
 create function totalCuenta(id_cuentaDetalle int) returns decimal(10,2)
 READS SQL DATA
@@ -1450,7 +1460,7 @@ update articulo set precioVP = precioUd * 3;
 -- inserta 2 reservas 
 insert into reserva (id_entidad,id_establecimiento,fecha,fechaprevista,horaprevista,plazas,id_estado) values
 (1,1,now(),date_add(current_date(), interval 1 day),'14:00',10,1),
-(1,1,now(),date_add(current_date(), interval 0 day),'21:30', 4,1);
+(1,1,now(),date_add(current_date(), interval 0 day),'11:30', 4,1);
 
 -- asigna mesas a la cuenta 1 (habiendo comprobado que estaran libres)
 insert into cuenta_mesa (id_cuenta,id_mesa) values
@@ -1546,12 +1556,12 @@ where c.id =1 -- sobre la cta 2
 group by c.id ;
 
 
-select reservaMesaReservasPendientes();
+call reservaMesaReservasProximas();
 
 -- llegan los clientes de la reserva 1 cuenta 1 y cambia el estado de mesa de reservado a ocupado
-update cuenta set fechaEntrada =now() where id=2;
+-- update cuenta set fechaEntrada =now() where id=2;
 
 -- pagan y se marchan. Se cierra la cuenta
-update cuenta set fechasalida =now() where id=2;
+-- update cuenta set fechasalida =now() where id=2;
 
 select date_add(current_time(),interval -120 minute) as TiempoAnticipacionReservaMesa;
